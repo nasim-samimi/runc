@@ -55,30 +55,42 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		}
 		fmt.Println("cpu.rt_period_us", period)
 	}
+
 	str := ""
 	if r.CpuRtRuntime != 0 {
-		str = r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10)
-		//
+		runtimes, err := readCpuRtMultiRuntimeFile(filepath.Dir(path))
+
+		containerCpuset := strings.Split(r.CpusetCpus, ",")
+		newRuntimes := runtimes
+		for _, cpu := range containerCpuset {
+			cpuIND, _ := strconv.Atoi(cpu)
+			newRuntimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
+		}
+		for cpu, runtime := range newRuntimes {
+			str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
+		}
+		if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
+			return rerr
+		}
+
+		//write to container cgroup files
+		containerRuntimeStr := r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10)
+		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", containerRuntimeStr); rerr != nil {
+			return rerr
+		}
+
+		//logging data to debug.log
 		file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer file.Close()
-
 		logger := log.New(file, "prefix", log.LstdFlags)
 		logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
-		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", str, path)
-
-		runtimes, err := readCpuRtMultiRuntimeFile(filepath.Dir(path))
+		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
-
-		if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
-			return rerr
-		}
-
-		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
-			return rerr
-		}
+		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
+		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", str)
 
 	}
 	return nil
@@ -107,6 +119,25 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 		runtimes = append(runtimes, v)
 	}
 	return runtimes, nil
+}
+
+func writeToParentMultiRuntime(path string, r *configs.Resources) error {
+	str := ""
+	runtimes, _ := readCpuRtMultiRuntimeFile(filepath.Dir(path))
+
+	containerCpuset := strings.Split(r.CpusetCpus, ",")
+	newRuntimes := runtimes
+	for _, cpu := range containerCpuset {
+		cpuIND, _ := strconv.Atoi(cpu)
+		newRuntimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
+	}
+	for cpu, runtime := range newRuntimes {
+		str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
+	}
+	if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
+		return rerr
+	}
+	return nil
 }
 
 func (s *CpuGroup) Set(path string, r *configs.Resources) error {
