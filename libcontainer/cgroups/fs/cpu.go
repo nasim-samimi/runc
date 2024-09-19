@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -50,15 +51,23 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		} else {
 			period = ""
 		}
+		fmt.Println("cpu.rt_period_us", period)
 	}
+	str := ""
 	if r.CpuRtRuntime != 0 {
-		if err := cgroups.WriteFile(path, "cpu.rt_runtime_us", strconv.FormatInt(r.CpuRtRuntime, 10)); err != nil {
-			return err
+		str = r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10)
+		//
+		file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
 		}
-		if period != "" {
-			if err := cgroups.WriteFile(path, "cpu.rt_period_us", period); err != nil {
-				return err
-			}
+		defer file.Close()
+
+		logger := log.New(file, "prefix", log.LstdFlags)
+		logger.Printf("value of cpu.rt_multi_runtime_us%v\n in path:%v\n", str, path)
+		logger.Printf("cpu.rt_period_us%v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
+			return rerr
 		}
 	}
 	return nil
