@@ -58,20 +58,7 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 
 	str := ""
 	if r.CpuRtRuntime != 0 {
-		runtimes, err := readCpuRtMultiRuntimeFile(filepath.Dir(path))
-
-		containerCpuset := strings.Split(r.CpusetCpus, ",")
-		newRuntimes := runtimes
-		for _, cpu := range containerCpuset {
-			cpuIND, _ := strconv.Atoi(cpu)
-			newRuntimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
-		}
-		for cpu, runtime := range newRuntimes {
-			str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
-		}
-		if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
-			return rerr
-		}
+		writeToParentMultiRuntime(filepath.Dir(path), r)
 
 		//write to container cgroup files
 		containerRuntimeStr := r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10)
@@ -88,8 +75,8 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		logger := log.New(file, "prefix", log.LstdFlags)
 		logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
 		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
-		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
-		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
+		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
+		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
 		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", str)
 
 	}
@@ -123,7 +110,7 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	str := ""
-	runtimes, _ := readCpuRtMultiRuntimeFile(filepath.Dir(path))
+	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
 	newRuntimes := runtimes
@@ -134,7 +121,7 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	for cpu, runtime := range newRuntimes {
 		str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
 	}
-	if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
+	if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
 		return rerr
 	}
 	return nil
