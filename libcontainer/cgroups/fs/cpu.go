@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	"github.com/opencontainers/runc/libcontainer/cgroups/fscommon"
@@ -64,13 +66,47 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		defer file.Close()
 
 		logger := log.New(file, "prefix", log.LstdFlags)
-		logger.Printf("value of cpu.rt_multi_runtime_us%v\n in path:%v\n", str, path)
-		logger.Printf("cpu.rt_period_us%v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+		logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", str, path)
+
+		runtimes, err := readCpuRtMultiRuntimeFile(filepath.Dir(path))
+		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
+
+		if rerr := cgroups.WriteFile(filepath.Dir(path), "cpu.rt_multi_runtime_us", str); rerr != nil {
+			return rerr
+		}
+
 		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
 			return rerr
 		}
+
 	}
 	return nil
+}
+
+func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
+	const (
+		CpuRtMultiRuntimeFile = "cpu.rt_multi_runtime_us"
+	)
+
+	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
+	buf, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	runtimeStrings := strings.Split(string(buf), " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-2]
+
+	runtimes := make([]int64, 0, len(runtimeStrings))
+	for _, runtimeStr := range runtimeStrings {
+		v, err := strconv.ParseInt(runtimeStr, 10, 32)
+		if err != nil {
+			panic(fmt.Errorf("error parsing runtime %s in file %s: %v", runtimeStr, filePath, err))
+		}
+		runtimes = append(runtimes, v)
+	}
+	return runtimes, nil
 }
 
 func (s *CpuGroup) Set(path string, r *configs.Resources) error {
