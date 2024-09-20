@@ -105,7 +105,7 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	}
 
 	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-2]
 
 	runtimes := make([]int64, 0, len(runtimeStrings))
 	for _, runtimeStr := range runtimeStrings {
