@@ -78,14 +78,14 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		}
 
 		//logging data to debug.log
-		file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file.Close()
-		logger := log.New(file, "prefix", log.LstdFlags)
-		logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
-		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
+		// file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// defer file.Close()
+		// logger := log.New(file, "prefix", log.LstdFlags)
+		// logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+		// logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
 		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
 
@@ -141,11 +141,11 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	}
 	defer file.Close()
 	logger := log.New(file, "prefix", log.LstdFlags)
-	logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
-	logger.Printf("value of string %v\n in path:%v\n", str, path)
-	logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", runtimes)
+	logger.Printf("runtimes %v\n", runtimes)
+	logger.Printf("new runtimes %v\n", newRuntimes)
 	logger.Printf("cpusets %v\n", containerCpuset)
 	logger.Printf("file path %v\n", path)
+	logger.Printf("value of string %v\n in path:%v\n", str, path)
 
 	return nil
 }
