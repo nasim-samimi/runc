@@ -105,7 +105,7 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	}
 
 	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-2]
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
 	runtimes := make([]int64, 0, len(runtimeStrings))
 	for _, runtimeStr := range runtimeStrings {
@@ -142,8 +142,9 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	defer file.Close()
 	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
-	logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", str, path)
+	logger.Printf("value of string %v\n in path:%v\n", str, path)
 	logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", runtimes)
+	logger.Printf("cpusets %v\n", containerCpuset)
 	logger.Printf("file path %v\n", path)
 
 	return nil
