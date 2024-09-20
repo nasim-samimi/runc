@@ -120,13 +120,25 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	str := ""
+	file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+
 	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
 	newRuntimes := runtimes
 	for _, cpu := range containerCpuset {
 		cpuIND, _ := strconv.Atoi(cpu)
+		logger.Printf("cpu %v\n", cpu)
+		logger.Printf("cpuIND %v\n", cpuIND)
+		logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
+		logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
 		newRuntimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
+		logger.Printf("newRuntimes[cpuIND] %v\n", newRuntimes[cpuIND])
 	}
 	for cpu, runtime := range newRuntimes {
 		str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
@@ -135,12 +147,6 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 		return rerr
 	}
 
-	file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("runtimes %v\n", runtimes)
 	logger.Printf("new runtimes %v\n", newRuntimes)
 	logger.Printf("cpusets %v\n", containerCpuset)
