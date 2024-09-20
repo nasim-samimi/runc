@@ -130,25 +130,23 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
-	newRuntimes := runtimes
 	for _, cpu := range containerCpuset {
 		cpuIND, _ := strconv.Atoi(cpu)
 		logger.Printf("cpu %v\n", cpu)
 		logger.Printf("cpuIND %v\n", cpuIND)
 		logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
 		logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
-		newRuntimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
-		logger.Printf("newRuntimes[cpuIND] %v\n", newRuntimes[cpuIND])
+		runtimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
+		logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
 	}
-	for cpu, runtime := range newRuntimes {
+	for cpu, runtime := range runtimes {
 		str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
 	}
-	if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
+	if rerr := os.WriteFile(filepath.Join(path, "cpu.rt_multi_runtime_us"), []byte(str), os.ModePerm); rerr != nil {
 		return rerr
 	}
 
-	logger.Printf("runtimes %v\n", runtimes)
-	logger.Printf("new runtimes %v\n", newRuntimes)
+	logger.Printf("new runtimes %v\n", runtimes)
 	logger.Printf("cpusets %v\n", containerCpuset)
 	logger.Printf("file path %v\n", path)
 	logger.Printf("value of string %v\n in path:%v\n", str, path)
