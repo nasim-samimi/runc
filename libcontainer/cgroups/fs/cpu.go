@@ -58,6 +58,18 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 
 	str := ""
 	if r.CpuRtRuntime != 0 {
+
+		cgroupBasePath := "/sys/fs/cgroup/cpu,cpuacct"
+
+		// Update the KubePods cgroup
+		cgroupKubePods := filepath.Join(cgroupBasePath, "kubepods.slice")
+		writeToParentMultiRuntime(cgroupKubePods, r)
+
+		// Update the KubePodsBestEffort cgroup
+		cgroupKubePodsBestEffort := filepath.Join(cgroupBasePath, "kubepods.slice", "kubepods-besteffort.slice")
+		writeToParentMultiRuntime(cgroupKubePodsBestEffort, r)
+
+		// Update the pod cgroup
 		writeToParentMultiRuntime(filepath.Dir(path), r)
 
 		//write to container cgroup files
