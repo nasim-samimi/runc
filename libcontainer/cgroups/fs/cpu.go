@@ -56,7 +56,6 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		fmt.Println("cpu.rt_period_us", period)
 	}
 
-	str := ""
 	if r.CpuRtRuntime != 0 {
 
 		cgroupBasePath := "/sys/fs/cgroup/cpu,cpuacct"
@@ -89,7 +88,6 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
 		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
-		logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", str)
 
 	}
 	return nil
@@ -136,6 +134,18 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
 		return rerr
 	}
+
+	file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+	logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+	logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", str, path)
+	logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", runtimes)
+	logger.Printf("file path %v\n", path)
+
 	return nil
 }
 
