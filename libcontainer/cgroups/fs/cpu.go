@@ -105,7 +105,7 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	}
 
 	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-2]
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
 	runtimes := make([]int64, 0, len(runtimeStrings))
 	for _, runtimeStr := range runtimeStrings {
@@ -144,7 +144,7 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	averageRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
 	cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
 	str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
-	if rerr := os.WriteFile(filepath.Join(path, "cpu.rt_multi_runtime_us"), []byte(str), os.ModePerm); rerr != nil {
+	if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
 		return rerr
 	}
 
