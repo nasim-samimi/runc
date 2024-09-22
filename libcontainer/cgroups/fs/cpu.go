@@ -140,7 +140,7 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 		// logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
 	}
 	// averageRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
-	averageRuntime := int64(addedRuntime) + runtimes[0]
+	averageRuntime := int64(addedRuntime/float64(len(containerCpuset))) + runtimes[0]
 	cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
 	str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
 	if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", str); rerr != nil {
