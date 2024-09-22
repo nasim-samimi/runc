@@ -120,6 +120,7 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	str := ""
+	cpusetStr := ""
 	file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -130,18 +131,19 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
+	addedRuntime := float64(0)
 	for _, cpu := range containerCpuset {
 		cpuIND, _ := strconv.Atoi(cpu)
 		logger.Printf("cpu %v\n", cpu)
 		logger.Printf("cpuIND %v\n", cpuIND)
 		logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
 		logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
-		runtimes[cpuIND] = runtimes[cpuIND] + r.CpuRtRuntime
+		addedRuntime += float64(r.CpuRtRuntime * 1000000 / int64(r.CpuRtPeriod))
 		logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
 	}
-	for cpu, runtime := range runtimes {
-		str = str + strconv.Itoa(cpu) + " " + strconv.FormatInt(runtime, 10) + " "
-	}
+	averageRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
+	cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
+	str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
 	if rerr := os.WriteFile(filepath.Join(path, "cpu.rt_multi_runtime_us"), []byte(str), os.ModePerm); rerr != nil {
 		return rerr
 	}
