@@ -77,17 +77,15 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 			return rerr
 		}
 
-		//logging data to debug.log
-		// file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-		// defer file.Close()
-		// logger := log.New(file, "prefix", log.LstdFlags)
-		// logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
-		// logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
-		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n in path:%v\n", runtimes, path)
-		// logger.Printf("values read from cpu.rt_multi_runtime_us %v\n", newRuntimes)
+		// logging data to debug.log
+		file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+		logger := log.New(file, "prefix", log.LstdFlags)
+		logger.Printf("cpu.rt_period_us %v\n", strconv.FormatUint(r.CpuRtPeriod, 10))
+		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 
 	}
 	return nil
@@ -121,25 +119,25 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	str := ""
 	cpusetStr := ""
-	file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
+	// file, err := os.OpenFile("/home/worker3/debugparent.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer file.Close()
+	// logger := log.New(file, "prefix", log.LstdFlags)
 
 	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
 	addedRuntime := float64(0)
 	for _, cpu := range containerCpuset {
-		cpuIND, _ := strconv.Atoi(cpu)
-		logger.Printf("cpu %v\n", cpu)
-		logger.Printf("cpuIND %v\n", cpuIND)
-		logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
-		logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
+		// cpuIND, _ := strconv.Atoi(cpu)
+		fmt.Printf("cpu %v\n", cpu)
+		// logger.Printf("cpuIND %v\n", cpuIND)
+		// logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
+		// logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
 		addedRuntime += float64(r.CpuRtRuntime * 1000000 / int64(r.CpuRtPeriod))
-		logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
+		// logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
 	}
 	averageRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
 	cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
@@ -148,10 +146,10 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 		return rerr
 	}
 
-	logger.Printf("new runtimes %v\n", runtimes)
-	logger.Printf("cpusets %v\n", containerCpuset)
-	logger.Printf("file path %v\n", path)
-	logger.Printf("value of string %v\n in path:%v\n", str, path)
+	// logger.Printf("new runtimes %v\n", runtimes)
+	// logger.Printf("cpusets %v\n", containerCpuset)
+	// logger.Printf("file path %v\n", path)
+	// logger.Printf("value of string %v\n in path:%v\n", str, path)
 
 	return nil
 }
