@@ -93,7 +93,7 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 
 func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	const (
-		CpuRtMultiRuntimeFile = "cpu.rt_runtime_us"
+		CpuRtMultiRuntimeFile = "cpu.rt_multi_runtime_us"
 	)
 
 	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
@@ -116,35 +116,46 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	return runtimes, nil
 }
 
+func readCpuRtRuntimeFile(path string) (int64, error) {
+	const (
+		CpuRtMultiRuntimeFile = "cpu.rt_runtime_us"
+	)
+
+	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
+	buf, err := os.ReadFile(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	runtimeStrings := strings.Split(string(buf), " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+
+	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	return runtime, nil
+}
+
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
+	const (
+		parentRtPeriod = int64(1000000)
+	)
 	str := ""
-	cpusetStr := ""
 
 	runtimes, _ := readCpuRtMultiRuntimeFile(path)
 
 	containerCpuset := strings.Split(r.CpusetCpus, ",")
 	addedRuntime := float64(0)
-	for _, cpu := range containerCpuset {
-		// cpuIND, _ := strconv.Atoi(cpu)
-		fmt.Printf("cpu %v\n", cpu)
-		// logger.Printf("cpuIND %v\n", cpuIND)
-		// logger.Printf("runtimes[cpuIND] %v\n", runtimes[cpuIND])
-		// logger.Printf("r.CpuRtRuntime %v\n", r.CpuRtRuntime)
-		addedRuntime += float64(r.CpuRtRuntime * 1000000 / int64(r.CpuRtPeriod))
-		// logger.Printf("newRuntimes[cpuIND] %v\n", runtimes[cpuIND])
-	}
-	averageRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
+
+	addedRuntime = float64(r.CpuRtRuntime*parentRtPeriod/int64(r.CpuRtPeriod)) * float64(len(containerCpuset))
+
+	newRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
 	// averageRuntime := int64(addedRuntime/float64(len(containerCpuset))) + runtimes[0]
-	cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
-	str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
+	// cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
+	// str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
+
+	str = strconv.FormatInt(newRuntime, 10)
 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
 		return rerr
 	}
-
-	// logger.Printf("new runtimes %v\n", runtimes)
-	// logger.Printf("cpusets %v\n", containerCpuset)
-	// logger.Printf("file path %v\n", path)
-	// logger.Printf("value of string %v\n in path:%v\n", str, path)
 
 	return nil
 }
