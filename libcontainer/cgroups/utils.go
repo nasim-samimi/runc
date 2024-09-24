@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -272,12 +273,20 @@ func RemovePath(path string) error {
 func RemovePaths(paths map[string]string) (err error) {
 	const retries = 5
 	delay := 10 * time.Millisecond
+	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+
 	for i := 0; i < retries; i++ {
 		if i != 0 {
 			time.Sleep(delay)
 			delay *= 2
 		}
 		for s, p := range paths {
+			logger.Printf("path %v,%v\n", s, p)
 			if err := RemovePath(p); err != nil {
 				// do not log intermediate iterations
 				switch i {
