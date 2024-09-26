@@ -338,7 +338,7 @@ func RemovePaths(paths map[string]string) (err error) {
 	return fmt.Errorf("Failed to remove paths: %v", paths)
 }
 
-func readCpuRtRuntimeFile(path string) (int64, error) {
+func readCpuRtRuntimeFile(path string) (string, error) {
 	const (
 		CpuRtRuntimeFile = "cpu.rt_runtime_us"
 	)
@@ -346,28 +346,28 @@ func readCpuRtRuntimeFile(path string) (int64, error) {
 	filePath := filepath.Join(path, CpuRtRuntimeFile)
 	buf, err := os.ReadFile(filePath)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// runtimeStrings := strings.Split(string(buf), " ")
 	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
-	runtime, err := strconv.ParseInt(string(buf), 10, 32)
-	return runtime, nil
+	// runtime, err := strconv.ParseInt(string(buf), 10, 32)
+	return string(buf), nil
 }
 
-func removeFromParentRuntime(path string, removedRuntime int64) error {
-	oldRuntime, _ := readCpuRtRuntimeFile(path)
+// func removeFromParentRuntime(path string, removedRuntime int64) error {
+// 	oldRuntime, _ := readCpuRtRuntimeFile(path)
 
-	newRuntime := oldRuntime - removedRuntime
+// 	newRuntime := oldRuntime - removedRuntime
 
-	str := strconv.FormatInt(newRuntime, 10)
-	if rerr := WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
-		return rerr
-	}
+// 	str := strconv.FormatInt(newRuntime, 10)
+// 	if rerr := WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
+// 		return rerr
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 var (
 	hugePageSizes []string
