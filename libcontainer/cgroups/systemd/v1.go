@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -221,6 +222,30 @@ func (m *legacyManager) Apply(pid int) error {
 func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	file, err := os.OpenFile("/home/worker3/v1destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+	paths := m.paths["cpu"]
+	cgroup := m.cgroups
+	cpucgroup := cgroup.Resources.CpuRtRuntime
+
+	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
+	filePathmulti := filepath.Join(paths, "cpu.rt_multi_runtime_us")
+
+	removedRuntime, eread := os.ReadFile(filePath)
+	removedmultiRuntime, _ := os.ReadFile(filePathmulti)
+	logger.Printf("all paths to cgroups %v\n", m.paths)
+	logger.Printf("all cgroups %v\n", cgroup)
+	logger.Printf("cpucgroup %v\n", cpucgroup)
+	logger.Printf("removedRuntime %v\n", removedRuntime)
+	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
+	logger.Printf("filepaths %v\n", filePath)
+	if eread != nil {
+		logger.Printf("error reading file %v\n", eread)
+	}
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
