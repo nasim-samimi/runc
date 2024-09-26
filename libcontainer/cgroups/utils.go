@@ -288,8 +288,16 @@ func RemovePaths(paths map[string]string) (err error) {
 			time.Sleep(delay)
 			delay *= 2
 		}
-		removedRuntime, _ := readCpuRtRuntimeFile(paths["cpu"])
+		filePath := filepath.Join(paths["cpu"], "cpu.rt_runtime_us")
+		filePathmulti := filepath.Join(paths["cpu"], "cpu.rt_multi_runtime_us")
+		removedRuntime, eread := readCpuRtRuntimeFile(filePath)
+		removedmultiRuntime, _ := readCpuRtRuntimeFile(filePathmulti)
 		logger.Printf("removedRuntime %v\n", removedRuntime)
+		logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
+		logger.Printf("filepaths %v\n", filePath)
+		if eread != nil {
+			logger.Printf("error reading file %v\n", eread)
+		}
 		for s, p := range paths {
 
 			if err := RemovePath(p); err != nil {
@@ -339,12 +347,8 @@ func RemovePaths(paths map[string]string) (err error) {
 }
 
 func readCpuRtRuntimeFile(path string) (string, error) {
-	const (
-		CpuRtRuntimeFile = "cpu.rt_runtime_us"
-	)
 
-	filePath := filepath.Join(path, CpuRtRuntimeFile)
-	buf, err := os.ReadFile(filePath)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
