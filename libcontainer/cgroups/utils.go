@@ -274,7 +274,7 @@ func RemovePaths(paths map[string]string) (err error) {
 	const retries = 5
 	delay := 10 * time.Millisecond
 	///////////////////////////////
-	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("/home/worker3/debugremovepath.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

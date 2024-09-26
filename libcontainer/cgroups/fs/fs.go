@@ -3,7 +3,9 @@ package fs
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -142,6 +144,17 @@ func (m *manager) Apply(pid int) (err error) {
 func (m *manager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+	logger.Printf("RemovePaths\n")
+
+	path := filepath.Join(m.cgroups.Path, "cpu.rt_runtime_us")
+	logger.Printf("path %v\n", path)
 	return cgroups.RemovePaths(m.paths)
 }
 
