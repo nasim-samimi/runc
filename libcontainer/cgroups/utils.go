@@ -288,11 +288,10 @@ func RemovePaths(paths map[string]string) (err error) {
 			time.Sleep(delay)
 			delay *= 2
 		}
+		removedRuntime, _ := readCpuRtRuntimeFile(paths["cpu"])
+		logger.Printf("removedRuntime %v\n", removedRuntime)
 		for s, p := range paths {
-			if strings.Contains(p, "cpu,cpuacct") {
-				removedRuntime, _ := readCpuRtRuntimeFile(p)
-				logger.Printf("removedRuntime %v\n", removedRuntime)
-			}
+
 			if err := RemovePath(p); err != nil {
 				// do not log intermediate iterations
 				switch i {
@@ -350,10 +349,10 @@ func readCpuRtRuntimeFile(path string) (int64, error) {
 		return 0, err
 	}
 
-	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+	// runtimeStrings := strings.Split(string(buf), " ")
+	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
-	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	runtime, err := strconv.ParseInt(string(buf), 10, 32)
 	return runtime, nil
 }
 
