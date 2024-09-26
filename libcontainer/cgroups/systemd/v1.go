@@ -220,8 +220,6 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	file, err := os.OpenFile("/home/worker3/v1destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -246,6 +244,8 @@ func (m *legacyManager) Destroy() error {
 	if eread != nil {
 		logger.Printf("error reading file %v\n", eread)
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
