@@ -221,7 +221,6 @@ func (m *legacyManager) Apply(pid int) error {
 
 func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
-	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
