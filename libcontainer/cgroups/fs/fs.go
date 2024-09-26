@@ -3,9 +3,7 @@ package fs
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -144,44 +142,8 @@ func (m *manager) Apply(pid int) (err error) {
 func (m *manager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
-	logger.Printf("RemovePaths\n")
-
-	path := filepath.Join(m.cgroups.Path, "cpu.rt_runtime_us")
-	logger.Printf("path %v\n", path)
-
-	filePath := filepath.Join(m.paths["cpu"], "cpu.rt_runtime_us")
-	filePathmulti := filepath.Join(m.paths["cpu"], "cpu.rt_multi_runtime_us")
-
-	removedRuntime, eread := readCpuRtRuntime(filePath)
-	removedmultiRuntime, _ := readCpuRtRuntime(filePathmulti)
-	logger.Printf("removedRuntime %v\n", removedRuntime)
-	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
-	logger.Printf("filepaths %v\n", filePath)
-	if eread != nil {
-		logger.Printf("error reading file %v\n", eread)
-	}
 	return cgroups.RemovePaths(m.paths)
 
-}
-func readCpuRtRuntime(path string) (string, error) {
-
-	buf, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
-	// runtimeStrings := strings.Split(string(buf), " ")
-	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
-
-	// runtime, err := strconv.ParseInt(string(buf), 10, 32)
-	return string(buf), nil
 }
 
 func (m *manager) Path(subsys string) string {
