@@ -307,20 +307,21 @@ func RemovePaths(paths map[string]string) (err error) {
 			if os.IsNotExist(err) {
 				if strings.Contains(p, "cpu,cpuacct") {
 					removedRuntime, _ := readCpuRtRuntimeFile(p)
+					logger.Printf("removedRuntime %v\n", removedRuntime)
 					podPath := filepath.Dir(p)
-					if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-						return err
-					}
+					// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+					// 	return err
+					// }
 					logger.Printf("podPath %v\n", podPath)
 					besteffortPodsPath := filepath.Dir(podPath)
-					if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-						return err
-					}
+					// if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+					// 	return err
+					// }
 					logger.Printf("podPath %v\n", besteffortPodsPath)
 					kubePodsPath := filepath.Dir(besteffortPodsPath)
-					if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-						return err
-					}
+					// if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+					// 	return err
+					// }
 					logger.Printf("podPath %v\n", kubePodsPath)
 
 				}
