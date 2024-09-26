@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -221,7 +222,16 @@ func (m *legacyManager) Apply(pid int) error {
 func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+	logger.Printf("RemovePaths\n")
 
+	path := filepath.Join(m.cgroups.Path, "cpu.rt_runtime_us")
+	logger.Printf("path %v\n", path)
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
