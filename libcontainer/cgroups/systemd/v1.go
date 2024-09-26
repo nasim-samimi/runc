@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -230,8 +231,12 @@ func (m *legacyManager) Destroy() error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("RemovePaths\n")
 
-	path := filepath.Join(m.cgroups.Path, "cpu.rt_runtime_us")
-	logger.Printf("path %v\n", path)
+	if strings.Contains(m.paths["cpu"], "cpu,cpuacct") {
+		removedRuntime, _ := readCpuRtRuntimeFile(m.paths["cpu"])
+		logger.Printf("removedRuntime %v\n", removedRuntime)
+	}
+	logger.Printf("path[cpu] %v\n", m.paths["cpu"])
+	logger.Printf("cgroups.path[cpuacct] %v\n", m.cgroups.Path)
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
@@ -242,6 +247,24 @@ func (m *legacyManager) Destroy() error {
 	}
 
 	return stopErr
+}
+
+func readCpuRtRuntimeFile(path string) (int64, error) {
+	const (
+		CpuRtRuntimeFile = "cpu.rt_runtime_us"
+	)
+
+	filePath := filepath.Join(path, CpuRtRuntimeFile)
+	buf, err := os.ReadFile(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	runtimeStrings := strings.Split(string(buf), " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+
+	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	return runtime, nil
 }
 
 func (m *legacyManager) Path(subsys string) string {
