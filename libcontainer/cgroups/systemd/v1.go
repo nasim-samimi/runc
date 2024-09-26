@@ -2,10 +2,10 @@ package systemd
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -221,21 +221,31 @@ func (m *legacyManager) Apply(pid int) error {
 
 func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
-	// defer m.mu.Unlock()
-	// file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer file.Close()
-	// logger := log.New(file, "prefix", log.LstdFlags)
-	// logger.Printf("RemovePaths\n")
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	// if strings.Contains(m.paths["cpu"], "cpu,cpuacct") {
-	// 	removedRuntime, _ := readCpuRtRuntimeFile(m.paths["cpu"])
-	// 	logger.Printf("removedRuntime %v\n", removedRuntime)
-	// }
-	// logger.Printf("path[cpu] %v\n", m.paths["cpu"])
-	// logger.Printf("cgroups.path[cpuacct] %v\n", m.cgroups.Path)
+	file, err := os.OpenFile("/home/worker3/debugdestroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
+	logger.Printf("RemovePaths\n")
+
+	path := filepath.Join(m.cgroups.Path, "cpu.rt_runtime_us")
+	logger.Printf("path %v\n", path)
+
+	filePath := filepath.Join(m.paths["cpu"], "cpu.rt_runtime_us")
+	filePathmulti := filepath.Join(m.paths["cpu"], "cpu.rt_multi_runtime_us")
+
+	removedRuntime, eread := readCpuRtRuntime(filePath)
+	removedmultiRuntime, _ := readCpuRtRuntime(filePathmulti)
+	logger.Printf("removedRuntime %v\n", removedRuntime)
+	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
+	logger.Printf("filepaths %v\n", filePath)
+	if eread != nil {
+		logger.Printf("error reading file %v\n", eread)
+	}
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
@@ -248,22 +258,18 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-func readCpuRtRuntimeFile(path string) (int64, error) {
-	const (
-		CpuRtRuntimeFile = "cpu.rt_runtime_us"
-	)
+func readCpuRtRuntime(path string) (string, error) {
 
-	filePath := filepath.Join(path, CpuRtRuntimeFile)
-	buf, err := os.ReadFile(filePath)
+	buf, err := os.ReadFile(path)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+	// runtimeStrings := strings.Split(string(buf), " ")
+	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
-	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	return runtime, nil
+	// runtime, err := strconv.ParseInt(string(buf), 10, 32)
+	return string(buf), nil
 }
 
 func (m *legacyManager) Path(subsys string) string {
