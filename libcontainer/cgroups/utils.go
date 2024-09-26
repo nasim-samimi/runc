@@ -289,7 +289,10 @@ func RemovePaths(paths map[string]string) (err error) {
 			delay *= 2
 		}
 		for s, p := range paths {
-			logger.Printf("path %v,%v\n", s, p)
+			if strings.Contains(p, "cpu,cpuacct") {
+				removedRuntime, _ := readCpuRtRuntimeFile(p)
+				logger.Printf("removedRuntime %v\n", removedRuntime)
+			}
 			if err := RemovePath(p); err != nil {
 				// do not log intermediate iterations
 				switch i {
@@ -306,18 +309,17 @@ func RemovePaths(paths map[string]string) (err error) {
 			// cgroups
 			if os.IsNotExist(err) {
 				if strings.Contains(p, "cpu,cpuacct") {
-					removedRuntime, _ := readCpuRtRuntimeFile(p)
-					logger.Printf("removedRuntime %v\n", removedRuntime)
+
 					podPath := filepath.Dir(p)
 					// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
 					// 	return err
 					// }
-					logger.Printf("podPath %v\n", podPath)
+					logger.Printf("best effort Path %v\n", podPath)
 					besteffortPodsPath := filepath.Dir(podPath)
 					// if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
 					// 	return err
 					// }
-					logger.Printf("podPath %v\n", besteffortPodsPath)
+					logger.Printf("kube pods Path %v\n", besteffortPodsPath)
 					kubePodsPath := filepath.Dir(besteffortPodsPath)
 					// if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
 					// 	return err
