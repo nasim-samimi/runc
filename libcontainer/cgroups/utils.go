@@ -282,6 +282,7 @@ func RemovePaths(paths map[string]string) (err error) {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("RemovePaths\n")
 	///////////////////////////////
+
 	for i := 0; i < retries; i++ {
 		if i != 0 {
 			time.Sleep(delay)
@@ -298,11 +299,31 @@ func RemovePaths(paths map[string]string) (err error) {
 					logrus.WithError(err).Error("Failed to remove cgroup")
 				}
 			}
+
 			_, err := os.Stat(p)
 			// We need this strange way of checking cgroups existence because
 			// RemoveAll almost always returns error, even on already removed
 			// cgroups
 			if os.IsNotExist(err) {
+				if strings.Contains(p, "cpu,cpuacct") {
+					removedRuntime, _ := readCpuRtRuntimeFile(p)
+					podPath := filepath.Dir(p)
+					if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+						return err
+					}
+					logger.Printf("podPath %v\n", podPath)
+					besteffortPodsPath := filepath.Dir(podPath)
+					if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+						return err
+					}
+					logger.Printf("podPath %v\n", besteffortPodsPath)
+					kubePodsPath := filepath.Dir(besteffortPodsPath)
+					if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+						return err
+					}
+					logger.Printf("podPath %v\n", kubePodsPath)
+
+				}
 				delete(paths, s)
 			}
 		}
@@ -313,6 +334,37 @@ func RemovePaths(paths map[string]string) (err error) {
 		}
 	}
 	return fmt.Errorf("Failed to remove paths: %v", paths)
+}
+
+func readCpuRtRuntimeFile(path string) (int64, error) {
+	const (
+		CpuRtRuntimeFile = "cpu.rt_runtime_us"
+	)
+
+	filePath := filepath.Join(path, CpuRtRuntimeFile)
+	buf, err := os.ReadFile(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	runtimeStrings := strings.Split(string(buf), " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+
+	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	return runtime, nil
+}
+
+func removeFromParentRuntime(path string, removedRuntime int64) error {
+	oldRuntime, _ := readCpuRtRuntimeFile(path)
+
+	newRuntime := oldRuntime - removedRuntime
+
+	str := strconv.FormatInt(newRuntime, 10)
+	if rerr := WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
+		return rerr
+	}
+
+	return nil
 }
 
 var (
