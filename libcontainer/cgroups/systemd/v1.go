@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -232,12 +233,14 @@ func (m *legacyManager) Destroy() error {
 
 	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
 	filePathmulti := filepath.Join(paths, "cpu.rt_multi_runtime_us")
-
+	numCPUs := runtime.NumCPU()
+	logger.Printf("Number of CPUs:%v", numCPUs)
 	removedRuntime, eread := os.ReadFile(filePath)
 	removedmultiRuntime, _ := os.ReadFile(filePathmulti)
 	logger.Printf("all paths to cgroups %v\n", m.paths)
 	logger.Printf("all cgroups %v\n", cgroup)
 	logger.Printf("cpucgroup %v\n", cpucgroup)
+	logger.Printf("cpuset cgroup %v\n", cgroup.Resources.CpusetCpus)
 	logger.Printf("removedRuntime %v\n", removedRuntime)
 	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
 	logger.Printf("filepaths %v\n", filePath)
