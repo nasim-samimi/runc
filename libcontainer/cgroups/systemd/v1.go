@@ -229,24 +229,21 @@ func (m *legacyManager) Destroy() error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
-	cpucgroup := cgroup.Resources.CpuRtRuntime
-
+	containerRuntime := cgroup.Resources.CpuRtRuntime
+	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
-	filePathmulti := filepath.Join(paths, "cpu.rt_multi_runtime_us")
+	podpath := filepath.Dir(filePath)
+	logger.Printf("filepaths %v\n", filePath)
+	logger.Printf("podpath %v\n", podpath)
 	numCPUs := runtime.NumCPU()
 	logger.Printf("Number of CPUs:%v", numCPUs)
-	removedRuntime, eread := os.ReadFile(filePath)
-	removedmultiRuntime, _ := os.ReadFile(filePathmulti)
+	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
+
 	logger.Printf("all paths to cgroups %v\n", m.paths)
-	logger.Printf("all cgroups %v\n", cgroup)
-	logger.Printf("cpucgroup %v\n", cpucgroup)
+	logger.Printf("cpucgroup %v\n", containerRuntime)
 	logger.Printf("cpuset cgroup %v\n", cgroup.Resources.CpusetCpus)
 	logger.Printf("removedRuntime %v\n", removedRuntime)
-	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
-	logger.Printf("filepaths %v\n", filePath)
-	if eread != nil {
-		logger.Printf("error reading file %v\n", eread)
-	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
