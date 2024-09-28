@@ -246,6 +246,14 @@ func (m *legacyManager) Destroy() error {
 
 	podPath := filepath.Dir(paths)
 	oldRuntime, err := readCpuRtRuntimeFile(podPath)
+	if err != nil {
+		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
+	} else {
+		logger.Printf("oldRuntime %v\n", oldRuntime)
+	}
+	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+		logger.Printf("error removing runtime from parent %v\n", err)
+	}
 	logger.Printf("pod Path %v\n", podPath)
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
