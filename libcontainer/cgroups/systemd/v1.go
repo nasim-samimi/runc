@@ -297,7 +297,7 @@ func (m *legacyManager) Destroy() error {
 
 func readCpuRtRuntimeFile(path string) (int64, error) {
 	const (
-		CpuRtRuntimeFile = "cpu.rt_runtime_us"
+		CpuRtRuntimeFile = "cpu.rt_multi_runtime_us"
 	)
 
 	// filePath := filepath.Join(path, CpuRtRuntimeFile)
@@ -306,7 +306,7 @@ func readCpuRtRuntimeFile(path string) (int64, error) {
 		return 0, err
 	}
 
-	runtimeStrings := strings.Split(string(buf), "\n")
+	runtimeStrings := strings.Split(string(buf), " ")
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
 	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
