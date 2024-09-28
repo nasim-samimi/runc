@@ -278,6 +278,14 @@ func (m *legacyManager) Destroy() error {
 		logger.Printf("oldRuntime %v\n", oldRuntime)
 	}
 	logger.Printf("kube pods %v\n", kubePodsPath)
+	///////////////////////////////////////////
+	oldRuntime, err = readCpuRtRuntimeFile(paths)
+	if err != nil {
+		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
+	} else {
+		logger.Printf("oldRuntime %v\n", oldRuntime)
+	}
+	logger.Printf("container path %v\n", paths)
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
