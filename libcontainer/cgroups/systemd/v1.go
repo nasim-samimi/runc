@@ -257,19 +257,19 @@ func (m *legacyManager) Destroy() error {
 	}
 
 	podPath := filepath.Dir(paths)
-	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-		return err
-	}
+	// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+	// 	return err
+	// }
 	logger.Printf("best effort Path %v\n", podPath)
 	besteffortPodsPath := filepath.Dir(podPath)
-	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-		return err
-	}
+	// if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+	// 	return err
+	// }
 	logger.Printf("kube pods Path %v\n", besteffortPodsPath)
 	kubePodsPath := filepath.Dir(besteffortPodsPath)
-	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-		return err
-	}
+	// if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+	// 	return err
+	// }
 	logger.Printf("podPath %v\n", kubePodsPath)
 
 	return stopErr
