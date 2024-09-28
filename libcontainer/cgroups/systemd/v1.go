@@ -245,17 +245,6 @@ func (m *legacyManager) Destroy() error {
 	logger.Printf("cpuset cgroup %v\n", cgroup.Resources.CpusetCpus)
 	logger.Printf("removedRuntime %v\n", removedRuntime)
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-
-	// Both on success and on error, cleanup all the cgroups
-	// we are aware of, as some of them were created directly
-	// by Apply() and are not managed by systemd.
-	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
-		return err
-	}
-
 	podPath := filepath.Dir(paths)
 	// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
 	// 	return err
@@ -291,6 +280,17 @@ func (m *legacyManager) Destroy() error {
 		logger.Printf("oldRuntime %v\n", oldRuntime)
 	}
 	logger.Printf("kube pods %v\n", kubePodsPath)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
+
+	// Both on success and on error, cleanup all the cgroups
+	// we are aware of, as some of them were created directly
+	// by Apply() and are not managed by systemd.
+	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
+		return err
+	}
 
 	return stopErr
 }
