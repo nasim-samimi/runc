@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -241,29 +240,9 @@ func rmdir(path string) error {
 // by removing any subdirectories (sub-cgroups) first.
 func RemovePath(path string) error {
 	// try the fast path first
-	file, err := os.OpenFile("/home/worker3/utils-destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
-	logger.Printf("RemovePaths\n")
-
-	filePath := filepath.Join(path, "cpu.rt_runtime_us")
-	filePathmulti := filepath.Join(path, "cpu.rt_multi_runtime_us")
-
-	removedRuntime, eread := os.ReadFile(filePath)
-	removedmultiRuntime, _ := os.ReadFile(filePathmulti)
-	logger.Printf("removedRuntime %v\n", removedRuntime)
-	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
-	logger.Printf("filepaths %v\n", filePath)
-	if eread != nil {
-		logger.Printf("error reading file %v\n", eread)
-	}
 	if err := rmdir(path); err == nil {
 		return nil
 	}
-
 	infos, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -275,7 +254,6 @@ func RemovePath(path string) error {
 		if info.IsDir() {
 			// We should remove subcgroups dir first
 			if err = RemovePath(filepath.Join(path, info.Name())); err != nil {
-				logger.Printf("removing subpath %v\n", info.Name())
 				break
 			}
 		}

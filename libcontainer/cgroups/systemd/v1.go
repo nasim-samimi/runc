@@ -2,7 +2,6 @@ package systemd
 
 import (
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -222,63 +221,37 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	file, err := os.OpenFile("/home/worker3/v1destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
+	// file, err := os.OpenFile("/home/worker3/v1destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer file.Close()
+	// logger := log.New(file, "prefix", log.LstdFlags)
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
-	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
-
-	logger.Printf("filepaths %v\n", filePath)
 
 	numCPUs := runtime.NumCPU()
-	logger.Printf("Number of CPUs:%v", numCPUs)
 	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 
-	logger.Printf("cpucgroup %v\n", containerRuntime)
-	logger.Printf("cpuset cgroup %v\n", cgroup.Resources.CpusetCpus)
-	logger.Printf("removedRuntime %v\n", removedRuntime)
-
 	podPath := filepath.Dir(paths)
-	oldRuntime, err := readCpuRtRuntimeFile(podPath)
-	if err != nil {
-		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
-	} else {
-		logger.Printf("oldRuntime %v\n", oldRuntime)
-	}
 	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-		logger.Printf("error removing runtime from parent %v\n", err)
+		// logger.Printf("error removing runtime from parent %v\n", err)
+		logrus.Warn(err)
 	}
-	logger.Printf("pod Path %v\n", podPath)
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
-	oldRuntime, err = readCpuRtRuntimeFile(besteffortPodsPath)
-	if err != nil {
-		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
-	} else {
-		logger.Printf("oldRuntime %v\n", oldRuntime)
-	}
 	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-		logger.Printf("error removing runtime from parent %v\n", err)
+		// logger.Printf("error removing runtime from parent %v\n", err)
+		logrus.Warn(err)
 	}
-	logger.Printf("best effort pod path %v\n", besteffortPodsPath)
 	///////////////////////////////////////////
 	kubePodsPath := filepath.Dir(besteffortPodsPath)
-	oldRuntime, err = readCpuRtRuntimeFile(kubePodsPath)
-	if err != nil {
-		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
-	} else {
-		logger.Printf("oldRuntime %v\n", oldRuntime)
-	}
 	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-		logger.Printf("error removing runtime from parent %v\n", err)
+		// logger.Printf("error removing runtime from parent %v\n", err)
+		logrus.Warn(err)
 	}
-	logger.Printf("kube pods %v\n", kubePodsPath)
 	///////////////////////////////////////////
 
 	m.mu.Lock()
