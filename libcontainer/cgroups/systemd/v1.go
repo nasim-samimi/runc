@@ -250,18 +250,18 @@ func (m *legacyManager) Destroy() error {
 	// 	return err
 	// }
 	oldRuntime, err := readCpuRtRuntimeFile(podPath)
-	if err != nil {
-		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
-	} else {
-		logger.Printf("oldRuntime %v\n", oldRuntime)
-	}
+	// if err != nil {
+	// 	logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
+	// } else {
+	// 	logger.Printf("oldRuntime %v\n", oldRuntime)
+	// }
 	logger.Printf("pod Path %v\n", podPath)
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
 	// if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
 	// 	return err
 	// }
-	oldRuntime, err = readCpuRtRuntimeFile(podPath)
+	oldRuntime, err = readCpuRtRuntimeFile(besteffortPodsPath)
 	if err != nil {
 		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
 	} else {
@@ -273,7 +273,7 @@ func (m *legacyManager) Destroy() error {
 	// if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
 	// 	return err
 	// }
-	oldRuntime, err = readCpuRtRuntimeFile(podPath)
+	oldRuntime, err = readCpuRtRuntimeFile(kubePodsPath)
 	if err != nil {
 		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
 	} else {
