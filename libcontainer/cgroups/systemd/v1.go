@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -256,26 +257,26 @@ func (m *legacyManager) Destroy() error {
 	logger.Printf("pod Path %v\n", podPath)
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
-	// if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-	// 	return err
-	// }
 	oldRuntime, err = readCpuRtRuntimeFile(besteffortPodsPath)
 	if err != nil {
 		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
 	} else {
 		logger.Printf("oldRuntime %v\n", oldRuntime)
 	}
+	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+		return err
+	}
 	logger.Printf("best effort pod path %v\n", besteffortPodsPath)
 	///////////////////////////////////////////
 	kubePodsPath := filepath.Dir(besteffortPodsPath)
-	// if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-	// 	return err
-	// }
 	oldRuntime, err = readCpuRtRuntimeFile(kubePodsPath)
 	if err != nil {
 		logger.Printf("error reading cpu.rt_runtime_us file %v\n", err)
 	} else {
 		logger.Printf("oldRuntime %v\n", oldRuntime)
+	}
+	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+		return err
 	}
 	logger.Printf("kube pods %v\n", kubePodsPath)
 	///////////////////////////////////////////
@@ -301,7 +302,7 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-func readCpuRtRuntimeFile(path string) (string, error) {
+func readCpuRtRuntimeFile(path string) (int64, error) {
 	const (
 		CpuRtRuntimeFile = "cpu.rt_runtime_us"
 	)
@@ -309,35 +310,35 @@ func readCpuRtRuntimeFile(path string) (string, error) {
 	// filePath := filepath.Join(path, CpuRtRuntimeFile)
 	buf, err := cgroups.ReadFile(path, CpuRtRuntimeFile)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
 	// runtimeStrings := strings.Split(string(buf), " ")
 	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
 	// runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	// runtime, err := strconv.ParseInt(buf, 10, 32)
-	return buf, nil
+	runtime, err := strconv.ParseInt(buf, 10, 32)
+	return runtime, nil
 }
 
-// func removeFromParentRuntime(path string, removedRuntime int64) error {
-// 	oldRuntime, err := readCpuRtRuntimeFile(path)
-// 	if err != nil {
-// 		return err
-// 	}
+func removeFromParentRuntime(path string, removedRuntime int64) error {
+	oldRuntime, err := readCpuRtRuntimeFile(path)
+	if err != nil {
+		return err
+	}
 
-// 	newRuntime := oldRuntime - removedRuntime
-// 	if newRuntime < 0 {
-// 		newRuntime = 0
-// 	}
+	newRuntime := oldRuntime - removedRuntime
+	if newRuntime < 0 {
+		newRuntime = 0
+	}
 
-// 	str := strconv.FormatInt(newRuntime, 10)
-// 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
-// 		return rerr
-// 	}
+	str := strconv.FormatInt(newRuntime, 10)
+	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
+		return rerr
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func (m *legacyManager) Path(subsys string) string {
 	m.mu.Lock()
