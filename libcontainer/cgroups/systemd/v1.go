@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -232,9 +233,9 @@ func (m *legacyManager) Destroy() error {
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
-	podpath := filepath.Dir(filePath)
+
 	logger.Printf("filepaths %v\n", filePath)
-	logger.Printf("podpath %v\n", podpath)
+
 	numCPUs := runtime.NumCPU()
 	logger.Printf("Number of CPUs:%v", numCPUs)
 	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
@@ -255,7 +256,54 @@ func (m *legacyManager) Destroy() error {
 		return err
 	}
 
+	podPath := filepath.Dir(paths)
+	// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+	// 	return err
+	// }
+	logger.Printf("best effort Path %v\n", podPath)
+	besteffortPodsPath := filepath.Dir(podPath)
+	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+		return err
+	}
+	logger.Printf("kube pods Path %v\n", besteffortPodsPath)
+	kubePodsPath := filepath.Dir(besteffortPodsPath)
+	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+		return err
+	}
+	logger.Printf("podPath %v\n", kubePodsPath)
+
 	return stopErr
+}
+
+func readCpuRtRuntimeFile(path string) (int64, error) {
+	const (
+		CpuRtRuntimeFile = "cpu.rt_runtime_us"
+	)
+
+	filePath := filepath.Join(path, CpuRtRuntimeFile)
+	buf, err := os.ReadFile(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	runtimeStrings := strings.Split(string(buf), " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+
+	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	return runtime, nil
+}
+
+func removeFromParentRuntime(path string, removedRuntime int64) error {
+	oldRuntime, _ := readCpuRtRuntimeFile(path)
+
+	newRuntime := oldRuntime - removedRuntime
+
+	str := strconv.FormatInt(newRuntime, 10)
+	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
+		return rerr
+	}
+
+	return nil
 }
 
 func (m *legacyManager) Path(subsys string) string {
