@@ -257,9 +257,9 @@ func (m *legacyManager) Destroy() error {
 	}
 
 	podPath := filepath.Dir(paths)
-	// if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-	// 	return err
-	// }
+	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+		return err
+	}
 	logger.Printf("best effort Path %v\n", podPath)
 	besteffortPodsPath := filepath.Dir(podPath)
 	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
@@ -294,9 +294,15 @@ func readCpuRtRuntimeFile(path string) (int64, error) {
 }
 
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	oldRuntime, _ := readCpuRtRuntimeFile(path)
+	oldRuntime, err := readCpuRtRuntimeFile(path)
+	if err != nil {
+		return err
+	}
 
 	newRuntime := oldRuntime - removedRuntime
+	if newRuntime < 0 {
+		newRuntime = 0
+	}
 
 	str := strconv.FormatInt(newRuntime, 10)
 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
