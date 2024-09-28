@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -240,7 +239,6 @@ func (m *legacyManager) Destroy() error {
 	logger.Printf("Number of CPUs:%v", numCPUs)
 	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 
-	logger.Printf("all paths to cgroups %v\n", m.paths)
 	logger.Printf("cpucgroup %v\n", containerRuntime)
 	logger.Printf("cpuset cgroup %v\n", cgroup.Resources.CpusetCpus)
 	logger.Printf("removedRuntime %v\n", removedRuntime)
@@ -295,43 +293,43 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-func readCpuRtRuntimeFile(path string) (int64, error) {
+func readCpuRtRuntimeFile(path string) (string, error) {
 	const (
 		CpuRtRuntimeFile = "cpu.rt_runtime_us"
 	)
 
-	filePath := filepath.Join(path, CpuRtRuntimeFile)
-	buf, err := os.ReadFile(filePath)
+	// filePath := filepath.Join(path, CpuRtRuntimeFile)
+	buf, err := cgroups.ReadFile(path, CpuRtRuntimeFile)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
 	// runtimeStrings := strings.Split(string(buf), " ")
 	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
 	// runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	runtime, err := strconv.ParseInt(string(buf), 10, 32)
-	return runtime, nil
+	// runtime, err := strconv.ParseInt(buf, 10, 32)
+	return buf, nil
 }
 
-func removeFromParentRuntime(path string, removedRuntime int64) error {
-	oldRuntime, err := readCpuRtRuntimeFile(path)
-	if err != nil {
-		return err
-	}
+// func removeFromParentRuntime(path string, removedRuntime int64) error {
+// 	oldRuntime, err := readCpuRtRuntimeFile(path)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	newRuntime := oldRuntime - removedRuntime
-	if newRuntime < 0 {
-		newRuntime = 0
-	}
+// 	newRuntime := oldRuntime - removedRuntime
+// 	if newRuntime < 0 {
+// 		newRuntime = 0
+// 	}
 
-	str := strconv.FormatInt(newRuntime, 10)
-	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
-		return rerr
-	}
+// 	str := strconv.FormatInt(newRuntime, 10)
+// 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
+// 		return rerr
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (m *legacyManager) Path(subsys string) string {
 	m.mu.Lock()
