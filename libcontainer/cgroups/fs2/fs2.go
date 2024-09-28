@@ -3,9 +3,7 @@ package fs2
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
@@ -142,26 +140,6 @@ func (m *manager) Freeze(state configs.FreezerState) error {
 }
 
 func (m *manager) Destroy() error {
-	file, err := os.OpenFile("/home/worker3/fs2.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
-	logger.Printf("RemovePaths\n")
-	paths := m.dirPath
-
-	filePath := filepath.Join(paths, "cpu.rt_runtime_us")
-	filePathmulti := filepath.Join(paths, "cpu.rt_multi_runtime_us")
-
-	removedRuntime, eread := os.ReadFile(filePath)
-	removedmultiRuntime, _ := os.ReadFile(filePathmulti)
-	logger.Printf("removedRuntime %v\n", removedRuntime)
-	logger.Printf("removedmultiRuntime %v\n", removedmultiRuntime)
-	logger.Printf("filepaths %v\n", filePath)
-	if eread != nil {
-		logger.Printf("error reading file %v\n", eread)
-	}
 	return cgroups.RemovePath(m.dirPath)
 }
 
