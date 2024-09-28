@@ -298,11 +298,11 @@ func readCpuRtRuntimeFile(path string) (int64, error) {
 		return 0, err
 	}
 
-	// runtimeStrings := strings.Split(string(buf), " ")
-	// runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+	runtimeStrings := strings.Split(string(buf), "\n")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
-	// runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	runtime, err := strconv.ParseInt(buf, 10, 32)
+	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	// runtime, err := strconv.ParseInt(buf, 10, 32)
 	return runtime, nil
 }
 
