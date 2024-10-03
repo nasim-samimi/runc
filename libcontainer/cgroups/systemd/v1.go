@@ -222,37 +222,32 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	// file, err := os.OpenFile("/home/worker3/v1destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer file.Close()
-	// logger := log.New(file, "prefix", log.LstdFlags)
 	///////////////////////////////////////////////////uncomment this
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 
-	numCPUs := runtime.NumCPU()
-	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
-
-	podPath := filepath.Dir(paths)
-	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-		// logger.Printf("error removing runtime from parent %v\n", err)
-		fmt.Println(err)
-	}
-	///////////////////////////////////////////
-	besteffortPodsPath := filepath.Dir(podPath)
-	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-		// logger.Printf("error removing runtime from parent %v\n", err)
-		fmt.Println(err)
-	}
-	///////////////////////////////////////////
-	kubePodsPath := filepath.Dir(besteffortPodsPath)
-	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-		// logger.Printf("error removing runtime from parent %v\n", err)
-		fmt.Println(err)
+	if containerRuntime > 0 {
+		numCPUs := runtime.NumCPU()
+		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
+		podPath := filepath.Dir(paths)
+		if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+			// logger.Printf("error removing runtime from parent %v\n", err)
+			fmt.Println(err)
+		}
+		///////////////////////////////////////////
+		besteffortPodsPath := filepath.Dir(podPath)
+		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+			// logger.Printf("error removing runtime from parent %v\n", err)
+			fmt.Println(err)
+		}
+		///////////////////////////////////////////
+		kubePodsPath := filepath.Dir(besteffortPodsPath)
+		if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+			// logger.Printf("error removing runtime from parent %v\n", err)
+			fmt.Println(err)
+		}
 	}
 	///////////////////////////////////////////to here
 
