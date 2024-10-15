@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -39,12 +38,12 @@ func (s *CpuGroup) Apply(path string, r *configs.Resources, pid int) error {
 
 func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 	var period string
-	file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	logger := log.New(file, "prefix", log.LstdFlags)
+	// file, err := os.OpenFile("/home/worker3/debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer file.Close()
+	// logger := log.New(file, "prefix", log.LstdFlags)
 	if r.CpuRtPeriod != 0 {
 		period = strconv.FormatUint(r.CpuRtPeriod, 10)
 		if err := cgroups.WriteFile(path, "cpu.rt_period_us", period); err != nil {
@@ -76,7 +75,7 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 
 		//write to container cgroup files
 		containerRuntimeStr := r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10) + " "
-		logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
+		// logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", containerRuntimeStr); rerr != nil {
 			return rerr
 		}
