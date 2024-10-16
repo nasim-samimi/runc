@@ -257,9 +257,6 @@ func (m *legacyManager) Destroy() error {
 		}
 	}
 	////////////////////////////////////////////
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
