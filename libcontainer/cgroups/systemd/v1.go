@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -221,6 +222,12 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
+	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	paths := m.paths["cpu"]
@@ -233,19 +240,19 @@ func (m *legacyManager) Destroy() error {
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 		podPath := filepath.Dir(paths)
 		if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-			//logger.Printf("error removing runtime from parent %v\n", err)
+			logger.Printf("error removing runtime from parent %v\n", err)
 			//                      fmt.Println(err)
 		}
 		///////////////////////////////////////////
 		besteffortPodsPath := filepath.Dir(podPath)
 		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-			//logger.Printf("error removing runtime from parent %v\n", err)
+			logger.Printf("error removing runtime from parent %v\n", err)
 			//                      fmt.Println(err)
 		}
 		///////////////////////////////////////////
 		kubePodsPath := filepath.Dir(besteffortPodsPath)
 		if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-			//logger.Printf("error removing runtime from parent %v\n", err)
+			logger.Printf("error removing runtime from parent %v\n", err)
 			//                      fmt.Println(err)
 		}
 	}
