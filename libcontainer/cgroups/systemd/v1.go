@@ -2,7 +2,6 @@ package systemd
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -222,7 +221,8 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	/////////////////////////////////////////////////uncomment this
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
@@ -233,23 +233,23 @@ func (m *legacyManager) Destroy() error {
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 		podPath := filepath.Dir(paths)
 		if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-			// logger.Printf("error removing runtime from parent %v\n", err)
-			fmt.Println(err)
+			//logger.Printf("error removing runtime from parent %v\n", err)
+			//                      fmt.Println(err)
 		}
 		///////////////////////////////////////////
 		besteffortPodsPath := filepath.Dir(podPath)
 		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-			// logger.Printf("error removing runtime from parent %v\n", err)
-			fmt.Println(err)
+			//logger.Printf("error removing runtime from parent %v\n", err)
+			//                      fmt.Println(err)
 		}
 		///////////////////////////////////////////
 		kubePodsPath := filepath.Dir(besteffortPodsPath)
 		if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-			// logger.Printf("error removing runtime from parent %v\n", err)
-			fmt.Println(err)
+			//logger.Printf("error removing runtime from parent %v\n", err)
+			//                      fmt.Println(err)
 		}
 	}
-	/////////////////////////////////////////to here
+	////////////////////////////////////////////
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -265,35 +265,46 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-func readCpuRtRuntimeFile(path string) (int64, error) {
-	const (
-		CpuRtRuntimeFile = "cpu.rt_multi_runtime_us"
-	)
-
-	// filePath := filepath.Join(path, CpuRtRuntimeFile)
-	buf, err := cgroups.ReadFile(path, CpuRtRuntimeFile)
-	if err != nil {
-		return 0, err
-	}
-
-	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
-
-	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	// runtime, err := strconv.ParseInt(buf, 10, 32)
-	return runtime, nil
-}
-
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	oldRuntime, err := readCpuRtRuntimeFile(path)
-	if err != nil {
-		return err
+	// file, err := os.OpenFile("/home/worker3/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 		log.Fatal(err)
+	// }
+	// defer file.Close()
+	// logger := log.New(file, "prefix", log.LstdFlags)
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
+	if erro != nil {
+		// logger.Printf("error opening the file:v", erro)
+		logrus.Infof("error opening the file:%v", erro)
 	}
+	buffer := make([]byte, 512)
+	// logger.Printf("buffer:%v",buffer)
+	cgfile.Seek(0, 0)
+	n, err := cgfile.Read(buffer)
+	if err != nil {
+		logrus.Infof("error reading the file:%v", err)
+	}
+	// logger.Printf("n:%v",n)
+	content := string(buffer[:n])
+	// logger.Printf("content:%v",content)
+	//buf, err := cgroups.ReadFile(path, "cpu.rt_multi_runtime_us")
+	//if err != nil {
+	//        return err
+	//}
 
+	runtimeStrings := strings.Split(content, " ")
+	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+	// logger.Printf("runtimeStrings:%v",runtimeStrings)
+	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	// logger.Printf("oldRuntime:%v",oldRuntime)
 	newRuntime := oldRuntime - removedRuntime
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
+
+	cgfile.Sync()
+	cgfile.Write([]byte(strconv.FormatInt(newRuntime, 10)))
+	defer cgfile.Close()
 
 	str := strconv.FormatInt(newRuntime, 10)
 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
