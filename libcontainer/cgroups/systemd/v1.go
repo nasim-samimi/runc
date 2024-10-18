@@ -234,6 +234,10 @@ func (m *legacyManager) Destroy() error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
+	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
+		return err
+	}
 	paths := m.paths["cpu"]
 	logger.Printf("paths:%v", paths)
 	cgroup := m.cgroups
@@ -272,10 +276,6 @@ func (m *legacyManager) Destroy() error {
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
 	// by Apply() and are not managed by systemd.
-	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
-		return err
-	}
 	return stopErr
 }
 
