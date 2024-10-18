@@ -275,7 +275,11 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
+var cgroupLock sync.Mutex
+
 func removeFromParentRuntime(path string, removedRuntime int64) error {
+	cgroupLock.Lock() // Ensure that cgroup file modifications are serialized
+	defer cgroupLock.Unlock()
 	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
