@@ -228,8 +228,7 @@ func (m *legacyManager) Destroy() error {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	const maxRetries = 5
-	const retryInterval = 1 * time.Second
+
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -248,20 +247,20 @@ func (m *legacyManager) Destroy() error {
 		}
 		///////////////////////////////////////////
 		besteffortPodsPath := filepath.Dir(podPath)
-		for i := 0; i < maxRetries; i++ {
-			if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-				logger.Printf("error removing runtime from besteffort pod path %v on try %v\n", err, i)
-				//                      fmt.Println(err)
-			}
+
+		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
+			//                      fmt.Println(err)
 		}
+
 		///////////////////////////////////////////
 		kubePodsPath := filepath.Dir(besteffortPodsPath)
-		for i := 0; i < maxRetries; i++ {
-			if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-				logger.Printf("error removing runtime from kubepds %v on try %v\n", err, i)
-				//                      fmt.Println(err)
-			}
+
+		if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+			logger.Printf("error removing runtime from kubepds %v \n", err)
+			//                      fmt.Println(err)
 		}
+
 	}
 	////////////////////////////////////////////
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
@@ -282,6 +281,8 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		log.Fatal(err)
 	}
 	defer file.Close()
+	const maxRetries = 5
+	const retryInterval = 1 * time.Second
 	logger := log.New(file, "prefix", log.LstdFlags)
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
@@ -318,8 +319,14 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	defer cgfile.Close()
 
 	str := strconv.FormatInt(newRuntime, 10)
-	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
-		return rerr
+	for i := 0; i < maxRetries; i++ {
+		rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
+		if rerr == nil {
+			return nil
+		}
+		if i == maxRetries-1 {
+			return rerr
+		}
 	}
 
 	return nil
