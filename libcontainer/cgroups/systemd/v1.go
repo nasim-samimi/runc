@@ -314,21 +314,24 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		newRuntime = 0
 	}
 
-	cgfile.Write([]byte(strconv.FormatInt(newRuntime, 10)))
+	_, werr := cgfile.Write([]byte(strconv.FormatInt(newRuntime, 10)))
+	if werr != nil {
+		return werr
+	}
 	cgfile.Sync()
 	defer cgfile.Close()
 
-	str := strconv.FormatInt(newRuntime, 10)
-	for i := 0; i < maxRetries; i++ {
-		rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
-		if rerr == nil {
-			return nil
-		}
-		if i == maxRetries-1 {
-			return rerr
-		}
-		time.Sleep(retryInterval)
-	}
+	// str := strconv.FormatInt(newRuntime, 10)
+	// for i := 0; i < maxRetries; i++ {
+	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
+	// 	if rerr == nil {
+	// 		return nil
+	// 	}
+	// 	if i == maxRetries-1 {
+	// 		return rerr
+	// 	}
+	// 	time.Sleep(retryInterval)
+	// }
 
 	return nil
 }
