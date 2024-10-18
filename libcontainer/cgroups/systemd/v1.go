@@ -316,13 +316,13 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	}
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(strconv.FormatInt(newRuntime, 10)))
-		cgfile.Sync()
 		if werr == nil {
 			return nil
 		}
 		if i == maxRetries-1 {
 			return werr
 		}
+		cgfile.Sync()
 		time.Sleep(retryInterval)
 	}
 
