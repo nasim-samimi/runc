@@ -238,9 +238,6 @@ func (m *legacyManager) Destroy() error {
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 	numCPUs := runtime.NumCPU()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
-		return err
-	}
 
 	if containerRuntime > 0 {
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
@@ -272,7 +269,9 @@ func (m *legacyManager) Destroy() error {
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
 	// by Apply() and are not managed by systemd.
-
+	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
+		return err
+	}
 	return stopErr
 }
 
@@ -326,7 +325,6 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		if i == maxRetries-1 {
 			return werr
 		}
-		time.Sleep(retryInterval)
 	}
 
 	// for i := 0; i < maxRetries; i++ {
