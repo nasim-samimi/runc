@@ -229,6 +229,7 @@ func (m *legacyManager) Destroy() error {
 		log.Fatal(err)
 	}
 	defer file.Close()
+	const retryInterval = 100 * time.Millisecond
 
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
@@ -255,7 +256,7 @@ func (m *legacyManager) Destroy() error {
 		logger.Printf("error removing runtime from besteffort pod path %v \n", err)
 		//                      fmt.Println(err)
 	}
-
+	time.Sleep(retryInterval)
 	///////////////////////////////////////////
 	// kubePodsPath := filepath.Dir(besteffortPodsPath)
 
@@ -263,6 +264,7 @@ func (m *legacyManager) Destroy() error {
 		logger.Printf("error removing runtime from kubepds %v \n", err)
 		//                      fmt.Println(err)
 	}
+	time.Sleep(retryInterval)
 
 	////////////////////////////////////////////
 
@@ -354,7 +356,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 			}
 		}
 	}
-	time.Sleep(retryInterval)
+	// time.Sleep(retryInterval)
 	// str := strconv.FormatInt(newRuntime, 10) + "\n"
 	// for i := 0; i < maxRetries; i++ {
 	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
