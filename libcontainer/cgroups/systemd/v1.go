@@ -242,23 +242,23 @@ func (m *legacyManager) Destroy() error {
 
 	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 	logger.Printf("removedRuntime:%v", removedRuntime)
-	podPath := filepath.Dir(paths)
-	if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
+	podPath := filepath.Dir(m.paths["cpu"])
+	if err := removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime); err != nil {
 		logger.Printf("error removing runtime from pod path %v\n", err)
 		//                      fmt.Println(err)
 	}
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
 	logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
-	if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+	if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime); err != nil {
 		logger.Printf("error removing runtime from besteffort pod path %v \n", err)
 		//                      fmt.Println(err)
 	}
 
 	///////////////////////////////////////////
-	kubePodsPath := filepath.Dir(besteffortPodsPath)
+	// kubePodsPath := filepath.Dir(besteffortPodsPath)
 
-	if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+	if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime); err != nil {
 		logger.Printf("error removing runtime from kubepds %v \n", err)
 		//                      fmt.Println(err)
 	}
@@ -330,11 +330,27 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		_, werr := cgfile.Write([]byte(str))
 		time.Sleep(retryInterval)
 		if werr == nil {
-			serr := cgfile.Sync()
-			if serr != nil {
-				logger.Printf("error syncing the file:%v", serr)
-				continue
+			cgfile.Sync()
+			time.Sleep(retryInterval)
+
+			buffer = make([]byte, 32)
+			cgfile.Seek(0, 0)
+			n, err = cgfile.Read(buffer)
+			if err != nil {
+				logger.Printf("error re-reading the file: %v", err)
 			}
+
+			content = string(buffer[:n])
+			runtimeStrings = strings.Split(content, "\n")
+			updatedRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
+
+			if updatedRuntime == newRuntime {
+				logger.Printf("Successfully updated runtime to: %v", updatedRuntime)
+				return nil // Success
+			} else {
+				logger.Printf("New runtime not updated. Expected: %v, Got: %v", newRuntime, updatedRuntime)
+			}
+
 			// return nil
 		} else {
 			if i == maxRetries-1 {
