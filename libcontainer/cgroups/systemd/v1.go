@@ -316,6 +316,8 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		newRuntime = 0
 	}
 	str := strconv.FormatInt(newRuntime, 10)
+	logger.Printf("str:%v", str)
+	logger.Printf("bytes:%v", []byte(str))
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
 		if werr == nil {
