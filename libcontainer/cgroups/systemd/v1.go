@@ -342,6 +342,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 			}
 		}
 	}
+	time.Sleep(retryInterval)
 	// str := strconv.FormatInt(newRuntime, 10) + "\n"
 	// for i := 0; i < maxRetries; i++ {
 	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
