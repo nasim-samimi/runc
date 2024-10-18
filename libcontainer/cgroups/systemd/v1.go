@@ -249,6 +249,7 @@ func (m *legacyManager) Destroy() error {
 		logger.Printf("error removing runtime from pod path %v\n", err)
 		//                      fmt.Println(err)
 	}
+	time.Sleep(retryInterval)
 	///////////////////////////////////////////
 	besteffortPodsPath := filepath.Dir(podPath)
 	logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
