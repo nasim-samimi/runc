@@ -319,7 +319,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		newRuntime = 0
 	}
 	logger.Printf("cpuset:%v", cpuset)
-	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " "
+	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
 
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
