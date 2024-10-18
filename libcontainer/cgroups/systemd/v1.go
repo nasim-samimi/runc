@@ -332,30 +332,8 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	cgfile.Seek(0, 0)
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
-		time.Sleep(retryInterval)
 		if werr == nil {
-			cgfile.Sync()
-			time.Sleep(retryInterval)
-
-			buffer = make([]byte, 128)
-			cgfile.Seek(0, 0)
-			n, err = cgfile.Read(buffer)
-			if err != nil {
-				logger.Printf("error re-reading the file: %v", err)
-			}
-
-			newcontent := string(buffer[:n])
-			newruntimeStrings := strings.Split(newcontent, " ")
-			updatedRuntime, _ := strconv.ParseInt(newruntimeStrings[0], 10, 32)
-
-			if updatedRuntime == newRuntime {
-				logger.Printf("Successfully updated runtime to: %v", updatedRuntime)
-				return nil // Success
-			} else {
-				logger.Printf("New runtime not updated. Expected: %v, Got: %v", newRuntime, updatedRuntime)
-			}
-
-			// return nil
+			cgfile.Sync() // return nil
 		} else {
 			if i == maxRetries-1 {
 				logger.Printf("error writing the file:%v", werr)
