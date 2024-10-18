@@ -296,7 +296,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
 	if err != nil {
-		//logrus.Infof("error reading the file:%v", err)
+		logger.Printf("error reading the file:%v", err)
 	}
 	logger.Printf("n:%v", n)
 	content := string(buffer[:n])
@@ -310,10 +310,10 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	length := len(runtimeStrings)
 	logger.Printf("length:%v", length)
 	// cpuset := "0-" + strconv.Itoa(length-2)
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
 	logger.Printf("oldRuntime:%v", oldRuntime)
+	logger.Printf("removedRuntime:%v", removedRuntime)
 	newRuntime := oldRuntime - removedRuntime
 	logger.Printf("newRuntime:%v", newRuntime)
 	if newRuntime < 0 {
@@ -325,6 +325,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
+	cgfile.Seek(0, 0)
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
 		time.Sleep(retryInterval)
