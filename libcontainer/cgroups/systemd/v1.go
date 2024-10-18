@@ -232,13 +232,13 @@ func (m *legacyManager) Destroy() error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	paths := m.paths["cpu"]
+	cgroup := m.cgroups
+	containerRuntime := cgroup.Resources.CpuRtRuntime
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
 		return err
 	}
-	paths := m.paths["cpu"]
-	cgroup := m.cgroups
-	containerRuntime := cgroup.Resources.CpuRtRuntime
 
 	if containerRuntime > 0 {
 		containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
