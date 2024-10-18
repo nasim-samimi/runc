@@ -282,16 +282,16 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	}
 	defer file.Close()
 	const maxRetries = 10
-	const retryInterval = 20 * time.Millisecond
+	const retryInterval = 100 * time.Millisecond
 	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("path:%v", path)
-	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_runtime_us", os.O_RDWR)
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
 		//logrus.Infof("error opening the file:%v", erro)
 	}
 	defer cgfile.Close()
-	buffer := make([]byte, 32)
+	buffer := make([]byte, 128)
 	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
@@ -306,10 +306,10 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	//        return err
 	//}
 
-	runtimeStrings := strings.Split(content, "\n")
+	runtimeStrings := strings.Split(content, " ")
 	length := len(runtimeStrings)
 	logger.Printf("length:%v", length)
-	// cpuset := "0-" + strconv.Itoa(length-2)
+	cpuset := "0-" + strconv.Itoa(length-2)
 	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
 	logger.Printf("oldRuntime:%v", oldRuntime)
@@ -319,9 +319,9 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
-	// logger.Printf("cpuset:%v", cpuset)
-	// str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
-	str := strconv.FormatInt(newRuntime, 10) + "\n"
+	logger.Printf("cpuset:%v", cpuset)
+	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
+	// str := strconv.FormatInt(newRuntime, 10) + "\n"
 
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
@@ -333,16 +333,16 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 			cgfile.Sync()
 			time.Sleep(retryInterval)
 
-			buffer = make([]byte, 32)
+			buffer = make([]byte, 128)
 			cgfile.Seek(0, 0)
 			n, err = cgfile.Read(buffer)
 			if err != nil {
 				logger.Printf("error re-reading the file: %v", err)
 			}
 
-			content = string(buffer[:n])
-			runtimeStrings = strings.Split(content, "\n")
-			updatedRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
+			newcontent := string(buffer[:n])
+			newruntimeStrings := strings.Split(newcontent, " ")
+			updatedRuntime, _ := strconv.ParseInt(newruntimeStrings[0], 10, 32)
 
 			if updatedRuntime == newRuntime {
 				logger.Printf("Successfully updated runtime to: %v", updatedRuntime)
