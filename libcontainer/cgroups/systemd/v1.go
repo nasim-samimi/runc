@@ -315,7 +315,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
-	str := strconv.FormatInt(newRuntime, 10)
+	str := strconv.FormatInt(newRuntime, 10) + "\n"
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
 	for i := 0; i < maxRetries; i++ {
