@@ -232,6 +232,8 @@ func (m *legacyManager) Destroy() error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
+
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
@@ -263,7 +265,6 @@ func (m *legacyManager) Destroy() error {
 
 	}
 	////////////////////////////////////////////
-	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
@@ -322,6 +323,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		if i == maxRetries-1 {
 			return werr
 		}
+		time.Sleep(retryInterval)
 	}
 
 	defer cgfile.Close()
