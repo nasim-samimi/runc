@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/godbus/dbus/v5"
@@ -227,6 +228,8 @@ func (m *legacyManager) Destroy() error {
 		log.Fatal(err)
 	}
 	defer file.Close()
+	const maxRetries = 5
+	const retryInterval = 1 * time.Second
 	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -240,20 +243,24 @@ func (m *legacyManager) Destroy() error {
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
 		podPath := filepath.Dir(paths)
 		if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
-			logger.Printf("error removing runtime from parent %v\n", err)
+			logger.Printf("error removing runtime from pod path %v\n", err)
 			//                      fmt.Println(err)
 		}
 		///////////////////////////////////////////
 		besteffortPodsPath := filepath.Dir(podPath)
-		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
-			logger.Printf("error removing runtime from parent %v\n", err)
-			//                      fmt.Println(err)
+		for i := 0; i < maxRetries; i++ {
+			if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
+				logger.Printf("error removing runtime from besteffort pod path %v on try %v\n", err, i)
+				//                      fmt.Println(err)
+			}
 		}
 		///////////////////////////////////////////
 		kubePodsPath := filepath.Dir(besteffortPodsPath)
-		if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
-			logger.Printf("error removing runtime from parent %v\n", err)
-			//                      fmt.Println(err)
+		for i := 0; i < maxRetries; i++ {
+			if err := removeFromParentRuntime(kubePodsPath, removedRuntime); err != nil {
+				logger.Printf("error removing runtime from kubepds %v on try %v\n", err, i)
+				//                      fmt.Println(err)
+			}
 		}
 	}
 	////////////////////////////////////////////
