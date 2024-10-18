@@ -308,7 +308,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	runtimeStrings := strings.Split(content, " ")
 	length := len(runtimeStrings)
 	logger.Printf("length:%v", length)
-	cpuset := "0-" + strconv.Itoa(length-1)
+	cpuset := "0-" + strconv.Itoa(length-2)
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
