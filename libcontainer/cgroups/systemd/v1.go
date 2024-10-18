@@ -233,11 +233,13 @@ func (m *legacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	paths := m.paths["cpu"]
+	logger.Printf("paths:%v", paths)
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 	numCPUs := runtime.NumCPU()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
+	logger.Printf("containerRuntime:%v", containerRuntime)
 
 	if containerRuntime > 0 {
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
@@ -249,7 +251,7 @@ func (m *legacyManager) Destroy() error {
 		}
 		///////////////////////////////////////////
 		besteffortPodsPath := filepath.Dir(podPath)
-
+		logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
 		if err := removeFromParentRuntime(besteffortPodsPath, removedRuntime); err != nil {
 			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
 			//                      fmt.Println(err)
@@ -326,11 +328,17 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
 		if werr == nil {
-			cgfile.Sync()
-			return nil
-		}
-		if i == maxRetries-1 {
-			return werr
+			serr := cgfile.Sync()
+			if serr != nil {
+				logger.Printf("error syncing the file:%v", serr)
+				continue
+			}
+			// return nil
+		} else {
+			if i == maxRetries-1 {
+				logger.Printf("error writing the file:%v", werr)
+				return werr
+			}
 		}
 	}
 	// str := strconv.FormatInt(newRuntime, 10) + "\n"
