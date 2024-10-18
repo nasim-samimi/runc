@@ -285,13 +285,13 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	const retryInterval = 20 * time.Millisecond
 	logger := log.New(file, "prefix", log.LstdFlags)
 	logger.Printf("path:%v", path)
-	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
 		//logrus.Infof("error opening the file:%v", erro)
 	}
 	defer cgfile.Close()
-	buffer := make([]byte, 512)
+	buffer := make([]byte, 32)
 	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
@@ -306,10 +306,10 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	//        return err
 	//}
 
-	runtimeStrings := strings.Split(content, " ")
+	runtimeStrings := strings.Split(content, "\n")
 	length := len(runtimeStrings)
 	logger.Printf("length:%v", length)
-	cpuset := "0-" + strconv.Itoa(length-2)
+	// cpuset := "0-" + strconv.Itoa(length-2)
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
@@ -319,8 +319,9 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
-	logger.Printf("cpuset:%v", cpuset)
-	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
+	// logger.Printf("cpuset:%v", cpuset)
+	// str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
+	str := strconv.FormatInt(newRuntime, 10) + "\n"
 
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
