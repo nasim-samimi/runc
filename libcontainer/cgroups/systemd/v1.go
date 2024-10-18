@@ -239,41 +239,44 @@ func (m *legacyManager) Destroy() error {
 	logger.Printf("paths:%v", paths)
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
-	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
-	numCPUs := runtime.NumCPU()
-	logger.Printf("containerRuntime:%v", containerRuntime)
+	containerPeriod := cgroup.Resources.CpuRtPeriod
+	const period = 1000000
+	if containerRuntime > 0 {
+		containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
+		numCPUs := runtime.NumCPU()
+		logger.Printf("containerRuntime:%v", containerRuntime)
 
-	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
-	if err := removeFromParentRuntime(m.paths["cpu"], containerRuntime); err != nil {
-		logger.Printf("error removing runtime from besteffort pod path %v \n", err)
-		//                      fmt.Println(err)
-	}
-	time.Sleep(retryInterval)
+		removedRuntime := containerRuntime * int64(containerCpuset) * period / (int64(numCPUs) * int64(containerPeriod))
+		if err := removeFromParentRuntime(m.paths["cpu"], containerRuntime); err != nil {
+			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
+			//                      fmt.Println(err)
+		}
+		time.Sleep(retryInterval)
 
-	logger.Printf("removedRuntime:%v", removedRuntime)
-	podPath := filepath.Dir(m.paths["cpu"])
-	if err := removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime); err != nil {
-		logger.Printf("error removing runtime from pod path %v\n", err)
-		//                      fmt.Println(err)
-	}
-	time.Sleep(retryInterval)
-	///////////////////////////////////////////
-	besteffortPodsPath := filepath.Dir(podPath)
-	logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
-	if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime); err != nil {
-		logger.Printf("error removing runtime from besteffort pod path %v \n", err)
-		//                      fmt.Println(err)
-	}
-	time.Sleep(retryInterval)
-	///////////////////////////////////////////
-	// kubePodsPath := filepath.Dir(besteffortPodsPath)
+		logger.Printf("removedRuntime:%v", removedRuntime)
+		podPath := filepath.Dir(m.paths["cpu"])
+		if err := removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime); err != nil {
+			logger.Printf("error removing runtime from pod path %v\n", err)
+			//                      fmt.Println(err)
+		}
+		time.Sleep(retryInterval)
+		///////////////////////////////////////////
+		besteffortPodsPath := filepath.Dir(podPath)
+		logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
+		if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime); err != nil {
+			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
+			//                      fmt.Println(err)
+		}
+		time.Sleep(retryInterval)
+		///////////////////////////////////////////
+		// kubePodsPath := filepath.Dir(besteffortPodsPath)
 
-	if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime); err != nil {
-		logger.Printf("error removing runtime from kubepds %v \n", err)
-		//                      fmt.Println(err)
+		if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime); err != nil {
+			logger.Printf("error removing runtime from kubepds %v \n", err)
+			//                      fmt.Println(err)
+		}
+		time.Sleep(retryInterval)
 	}
-	time.Sleep(retryInterval)
-
 	////////////////////////////////////////////
 
 	// Both on success and on error, cleanup all the cgroups
