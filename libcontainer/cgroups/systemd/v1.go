@@ -286,7 +286,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	logger := log.New(file, "prefix", log.LstdFlags)
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
-		logger.Printf("error opening the file:v", erro)
+		return erro
 		//logrus.Infof("error opening the file:%v", erro)
 	}
 	buffer := make([]byte, 1024)
