@@ -344,7 +344,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	// 	}
 	// 	time.Sleep(retryInterval)
 	// }
-	cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
+	// cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
 
 	return nil
 }
