@@ -284,7 +284,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	const maxRetries = 10
 	const retryInterval = 100 * time.Millisecond
 	logger := log.New(file, "prefix", log.LstdFlags)
-	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_runtime_us", os.O_RDWR)
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
 		//logrus.Infof("error opening the file:%v", erro)
@@ -306,6 +306,9 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	//}
 
 	runtimeStrings := strings.Split(content, " ")
+	length := len(runtimeStrings)
+	logger.Printf("length:%v", length)
+	cpuset := "0-" + strconv.Itoa(length-1)
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
@@ -315,7 +318,9 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
-	str := strconv.FormatInt(newRuntime, 10) + "\n"
+	logger.Printf("cpuset:%v", cpuset)
+	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " "
+
 	logger.Printf("str:%v", str)
 	logger.Printf("bytes:%v", []byte(str))
 	for i := 0; i < maxRetries; i++ {
@@ -328,7 +333,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 			return werr
 		}
 	}
-
+	// str := strconv.FormatInt(newRuntime, 10) + "\n"
 	// for i := 0; i < maxRetries; i++ {
 	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
 	// 	if rerr == nil {
