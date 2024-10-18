@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
@@ -222,11 +223,7 @@ func (m *legacyManager) Apply(pid int) error {
 	return nil
 }
 
-var globalDestroyLock sync.Mutex
-
 func (m *legacyManager) Destroy() error {
-	globalDestroyLock.Lock() // Ensure only one Destroy() runs at a time
-	defer globalDestroyLock.Unlock()
 	file, err := os.OpenFile("/tmp/debug-destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -279,11 +276,16 @@ func (m *legacyManager) Destroy() error {
 	return stopErr
 }
 
-var cgroupLock sync.Mutex
+func lockFile(file *os.File) error {
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
+}
+
+// Unlock the file
+func unlockFile(file *os.File) error {
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+}
 
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	cgroupLock.Lock() // Ensure that cgroup file modifications are serialized
-	defer cgroupLock.Unlock()
 	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -299,6 +301,13 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		//logrus.Infof("error opening the file:%v", erro)
 	}
 	defer cgfile.Close()
+
+	if err := lockFile(cgfile); err != nil {
+		logger.Printf("Error locking file: %v", err)
+		return err
+	}
+	defer unlockFile(cgfile)
+
 	buffer := make([]byte, 128)
 	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
