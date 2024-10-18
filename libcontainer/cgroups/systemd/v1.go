@@ -279,14 +279,14 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
 		// logger.Printf("error opening the file:v", erro)
-		logrus.Infof("error opening the file:%v", erro)
+		//logrus.Infof("error opening the file:%v", erro)
 	}
 	buffer := make([]byte, 512)
 	// logger.Printf("buffer:%v",buffer)
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
 	if err != nil {
-		logrus.Infof("error reading the file:%v", err)
+		//logrus.Infof("error reading the file:%v", err)
 	}
 	// logger.Printf("n:%v",n)
 	content := string(buffer[:n])
