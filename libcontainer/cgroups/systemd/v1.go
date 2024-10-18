@@ -290,6 +290,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		return erro
 		//logrus.Infof("error opening the file:%v", erro)
 	}
+	defer cgfile.Close()
 	buffer := make([]byte, 1024)
 	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
@@ -327,8 +328,6 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		}
 		time.Sleep(retryInterval)
 	}
-
-	defer cgfile.Close()
 
 	// for i := 0; i < maxRetries; i++ {
 	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
