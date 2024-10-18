@@ -244,6 +244,12 @@ func (m *legacyManager) Destroy() error {
 	logger.Printf("containerRuntime:%v", containerRuntime)
 
 	removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
+	if err := removeFromParentRuntime(m.paths["cpu"], containerRuntime); err != nil {
+		logger.Printf("error removing runtime from besteffort pod path %v \n", err)
+		//                      fmt.Println(err)
+	}
+	time.Sleep(retryInterval)
+
 	logger.Printf("removedRuntime:%v", removedRuntime)
 	podPath := filepath.Dir(m.paths["cpu"])
 	if err := removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime); err != nil {
