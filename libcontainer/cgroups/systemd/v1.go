@@ -235,15 +235,16 @@ func (m *legacyManager) Destroy() error {
 	paths := m.paths["cpu"]
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
+	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
+	numCPUs := runtime.NumCPU()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
 		return err
 	}
 
 	if containerRuntime > 0 {
-		containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
-		numCPUs := runtime.NumCPU()
 		removedRuntime := containerRuntime * int64(containerCpuset) / int64(numCPUs)
+		logger.Printf("removedRuntime:%v", removedRuntime)
 		podPath := filepath.Dir(paths)
 		if err := removeFromParentRuntime(podPath, removedRuntime); err != nil {
 			logger.Printf("error removing runtime from pod path %v\n", err)
@@ -310,6 +311,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
 	logger.Printf("oldRuntime:%v", oldRuntime)
 	newRuntime := oldRuntime - removedRuntime
+	logger.Printf("newRuntime:%v", newRuntime)
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
