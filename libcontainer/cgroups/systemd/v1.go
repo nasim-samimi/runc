@@ -238,7 +238,6 @@ func (m *legacyManager) Destroy() error {
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 	numCPUs := runtime.NumCPU()
-	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 	logger.Printf("containerRuntime:%v", containerRuntime)
 
 	if containerRuntime > 0 {
@@ -271,6 +270,7 @@ func (m *legacyManager) Destroy() error {
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
 	// by Apply() and are not managed by systemd.
+	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
 	if err := cgroups.RemovePaths(m.paths); err != nil && stopErr == nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	}
 	defer file.Close()
 	const maxRetries = 10
-	const retryInterval = 100 * time.Millisecond
+	const retryInterval = 10 * time.Millisecond
 	logger := log.New(file, "prefix", log.LstdFlags)
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
@@ -327,6 +327,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	logger.Printf("bytes:%v", []byte(str))
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
+		time.Sleep(retryInterval)
 		if werr == nil {
 			serr := cgfile.Sync()
 			if serr != nil {
