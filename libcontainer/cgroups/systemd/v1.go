@@ -222,7 +222,11 @@ func (m *legacyManager) Apply(pid int) error {
 	return nil
 }
 
+var globalDestroyLock sync.Mutex
+
 func (m *legacyManager) Destroy() error {
+	globalDestroyLock.Lock() // Ensure only one Destroy() runs at a time
+	defer globalDestroyLock.Unlock()
 	file, err := os.OpenFile("/tmp/debug-destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
