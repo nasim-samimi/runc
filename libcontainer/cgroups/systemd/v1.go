@@ -284,7 +284,7 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 	const maxRetries = 10
 	const retryInterval = 100 * time.Millisecond
 	logger := log.New(file, "prefix", log.LstdFlags)
-	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
 		//logrus.Infof("error opening the file:%v", erro)
