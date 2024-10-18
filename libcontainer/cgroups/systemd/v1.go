@@ -222,7 +222,7 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("/tmp/debug-destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -270,27 +270,27 @@ func (m *legacyManager) Destroy() error {
 }
 
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	// file, err := os.OpenFile("/home/worker3/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 		log.Fatal(err)
-	// }
-	// defer file.Close()
-	// logger := log.New(file, "prefix", log.LstdFlags)
+	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	logger := log.New(file, "prefix", log.LstdFlags)
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
-		// logger.Printf("error opening the file:v", erro)
+		logger.Printf("error opening the file:v", erro)
 		//logrus.Infof("error opening the file:%v", erro)
 	}
 	buffer := make([]byte, 512)
-	// logger.Printf("buffer:%v",buffer)
+	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
 	if err != nil {
 		//logrus.Infof("error reading the file:%v", err)
 	}
-	// logger.Printf("n:%v",n)
+	logger.Printf("n:%v", n)
 	content := string(buffer[:n])
-	// logger.Printf("content:%v",content)
+	logger.Printf("content:%v", content)
 	//buf, err := cgroups.ReadFile(path, "cpu.rt_multi_runtime_us")
 	//if err != nil {
 	//        return err
@@ -298,9 +298,9 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 
 	runtimeStrings := strings.Split(content, " ")
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
-	// logger.Printf("runtimeStrings:%v",runtimeStrings)
+	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	// logger.Printf("oldRuntime:%v",oldRuntime)
+	logger.Printf("oldRuntime:%v", oldRuntime)
 	newRuntime := oldRuntime - removedRuntime
 	if newRuntime < 0 {
 		newRuntime = 0
