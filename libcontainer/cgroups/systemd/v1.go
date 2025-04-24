@@ -224,7 +224,6 @@ func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-
 	const retryInterval = 100 * time.Millisecond
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
@@ -253,22 +252,14 @@ func (m *LegacyManager) Destroy() error {
 
 	return stopErr
 }
-
 func lockFile(file *os.File) error {
 	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
 }
 
-// Unlock the file
 func unlockFile(file *os.File) error {
 	return syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 }
-
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	// file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer file.Close()
 	const maxRetries = 10
 	const retryInterval = 100 * time.Millisecond
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
@@ -289,7 +280,6 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 		return err
 	}
 	content := string(buffer[:n])
-
 	runtimeStrings := strings.Split(content, " ")
 	length := len(runtimeStrings)
 	cpuset := "0-" + strconv.Itoa(length-2)
@@ -310,7 +300,6 @@ func removeFromParentRuntime(path string, removedRuntime int64) error {
 			}
 		}
 	}
-
 	return nil
 }
 
