@@ -183,9 +183,7 @@ func (s *CpuGroup) GetStats(path string, stats *cgroups.Stats) error {
 }
 
 func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
-	const (
-		CpuRtMultiRuntimeFile = "cpu.rt_multi_runtime_us"
-	)
+	const CpuRtMultiRuntimeFile = "cpu.rt_multi_runtime_us"
 	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
 	buf, err := os.ReadFile(filePath)
 	if err != nil {

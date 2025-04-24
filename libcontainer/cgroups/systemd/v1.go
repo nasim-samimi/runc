@@ -224,7 +224,7 @@ func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-	const retryInterval = 100 * time.Millisecond
+	const retryInterval = 1 * time.Millisecond
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerPeriod := cgroup.Resources.CpuRtPeriod
@@ -261,7 +261,6 @@ func unlockFile(file *os.File) error {
 }
 func removeFromParentRuntime(path string, removedRuntime int64) error {
 	const maxRetries = 10
-	const retryInterval = 100 * time.Millisecond
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
