@@ -4,8 +4,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	systemdDbus "github.com/coreos/go-systemd/v22/dbus"
 	"github.com/sirupsen/logrus"
@@ -219,8 +223,26 @@ func (m *LegacyManager) Apply(pid int) error {
 func (m *LegacyManager) Destroy() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
+
+	const retryInterval = 100 * time.Millisecond
+	cgroup := m.cgroups
+	containerRuntime := cgroup.Resources.CpuRtRuntime
+	containerPeriod := cgroup.Resources.CpuRtPeriod
+	const period = 1000000
+	if containerRuntime > 0 {
+		containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
+		numCPUs := runtime.NumCPU()
+		removedRuntime := containerRuntime * int64(containerCpuset) * period / (int64(numCPUs) * int64(containerPeriod))
+		removeFromParentRuntime(m.paths["cpu"], containerRuntime)
+		time.Sleep(retryInterval)
+		removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime)
+		time.Sleep(retryInterval)
+		removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime)
+		time.Sleep(retryInterval)
+		removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime)
+		time.Sleep(retryInterval)
+	}
 
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
@@ -230,6 +252,66 @@ func (m *LegacyManager) Destroy() error {
 	}
 
 	return stopErr
+}
+
+func lockFile(file *os.File) error {
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_EX)
+}
+
+// Unlock the file
+func unlockFile(file *os.File) error {
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+}
+
+func removeFromParentRuntime(path string, removedRuntime int64) error {
+	// file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer file.Close()
+	const maxRetries = 10
+	const retryInterval = 100 * time.Millisecond
+	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
+	if erro != nil {
+		return erro
+	}
+	defer cgfile.Close()
+
+	if err := lockFile(cgfile); err != nil {
+		return err
+	}
+	defer unlockFile(cgfile)
+
+	buffer := make([]byte, 128)
+	cgfile.Seek(0, 0)
+	n, err := cgfile.Read(buffer)
+	if err != nil {
+		return err
+	}
+	content := string(buffer[:n])
+
+	runtimeStrings := strings.Split(content, " ")
+	length := len(runtimeStrings)
+	cpuset := "0-" + strconv.Itoa(length-2)
+	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
+	newRuntime := oldRuntime - removedRuntime
+	if newRuntime < 0 {
+		newRuntime = 0
+	}
+	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
+	cgfile.Seek(0, 0)
+	for i := 0; i < maxRetries; i++ {
+		_, werr := cgfile.Write([]byte(str))
+		if werr == nil {
+			cgfile.Sync()
+		} else {
+			if i == maxRetries-1 {
+				return werr
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *LegacyManager) Path(subsys string) string {
