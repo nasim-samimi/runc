@@ -2,7 +2,7 @@ package systemd
 
 import (
 	"errors"
-	"log"
+	// "log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -224,19 +224,10 @@ func (m *legacyManager) Apply(pid int) error {
 }
 
 func (m *legacyManager) Destroy() error {
-	file, err := os.OpenFile("/tmp/debug-destroy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
 	const retryInterval = 100 * time.Millisecond
-
-	logger := log.New(file, "prefix", log.LstdFlags)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	stopErr := stopUnit(m.dbus, getUnitName(m.cgroups))
-	paths := m.paths["cpu"]
-	logger.Printf("paths:%v", paths)
 	cgroup := m.cgroups
 	containerRuntime := cgroup.Resources.CpuRtRuntime
 	containerPeriod := cgroup.Resources.CpuRtPeriod
@@ -244,40 +235,16 @@ func (m *legacyManager) Destroy() error {
 	if containerRuntime > 0 {
 		containerCpuset := len(strings.Split(cgroup.Resources.CpusetCpus, ","))
 		numCPUs := runtime.NumCPU()
-		logger.Printf("containerRuntime:%v", containerRuntime)
-
 		removedRuntime := containerRuntime * int64(containerCpuset) * period / (int64(numCPUs) * int64(containerPeriod))
-		if err := removeFromParentRuntime(m.paths["cpu"], containerRuntime); err != nil {
-			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
-			//                      fmt.Println(err)
-		}
+		removeFromParentRuntime(m.paths["cpu"], containerRuntime)
 		time.Sleep(retryInterval)
-
-		logger.Printf("removedRuntime:%v", removedRuntime)
-		podPath := filepath.Dir(m.paths["cpu"])
-		if err := removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime); err != nil {
-			logger.Printf("error removing runtime from pod path %v\n", err)
-			//                      fmt.Println(err)
-		}
+		removeFromParentRuntime(filepath.Dir(m.paths["cpu"]), removedRuntime)
 		time.Sleep(retryInterval)
-		///////////////////////////////////////////
-		besteffortPodsPath := filepath.Dir(podPath)
-		logger.Printf("besteffortPodsPath:%v", besteffortPodsPath)
-		if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime); err != nil {
-			logger.Printf("error removing runtime from besteffort pod path %v \n", err)
-			//                      fmt.Println(err)
-		}
+		removeFromParentRuntime(filepath.Dir(filepath.Dir(m.paths["cpu"])), removedRuntime)
 		time.Sleep(retryInterval)
-		///////////////////////////////////////////
-		// kubePodsPath := filepath.Dir(besteffortPodsPath)
-
-		if err := removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime); err != nil {
-			logger.Printf("error removing runtime from kubepds %v \n", err)
-			//                      fmt.Println(err)
-		}
+		removeFromParentRuntime(filepath.Dir(filepath.Dir(filepath.Dir(m.paths["cpu"]))), removedRuntime)
 		time.Sleep(retryInterval)
 	}
-	////////////////////////////////////////////
 
 	// Both on success and on error, cleanup all the cgroups
 	// we are aware of, as some of them were created directly
@@ -298,87 +265,52 @@ func unlockFile(file *os.File) error {
 }
 
 func removeFromParentRuntime(path string, removedRuntime int64) error {
-	file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+	// file, err := os.OpenFile("/tmp/debug-openfile.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer file.Close()
 	const maxRetries = 10
 	const retryInterval = 100 * time.Millisecond
-	logger := log.New(file, "prefix", log.LstdFlags)
-	logger.Printf("path:%v", path)
 	cgfile, erro := cgroups.OpenFile(path, "cpu.rt_multi_runtime_us", os.O_RDWR)
 	if erro != nil {
 		return erro
-		//logrus.Infof("error opening the file:%v", erro)
 	}
 	defer cgfile.Close()
 
 	if err := lockFile(cgfile); err != nil {
-		logger.Printf("Error locking file: %v", err)
 		return err
 	}
 	defer unlockFile(cgfile)
 
 	buffer := make([]byte, 128)
-	logger.Printf("buffer:%v", buffer)
 	cgfile.Seek(0, 0)
 	n, err := cgfile.Read(buffer)
 	if err != nil {
-		logger.Printf("error reading the file:%v", err)
+		return err
 	}
-	logger.Printf("n:%v", n)
 	content := string(buffer[:n])
-	logger.Printf("content:%v", content)
-	//buf, err := cgroups.ReadFile(path, "cpu.rt_multi_runtime_us")
-	//if err != nil {
-	//        return err
-	//}
 
 	runtimeStrings := strings.Split(content, " ")
 	length := len(runtimeStrings)
-	logger.Printf("length:%v", length)
 	cpuset := "0-" + strconv.Itoa(length-2)
-	logger.Printf("runtimeStrings:%v", runtimeStrings)
 	oldRuntime, _ := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	logger.Printf("oldRuntime:%v", oldRuntime)
-	logger.Printf("removedRuntime:%v", removedRuntime)
 	newRuntime := oldRuntime - removedRuntime
-	logger.Printf("newRuntime:%v", newRuntime)
 	if newRuntime < 0 {
 		newRuntime = 0
 	}
-	logger.Printf("cpuset:%v", cpuset)
 	str := cpuset + " " + strconv.FormatInt(newRuntime, 10) + " " + "\n"
-	// str := strconv.FormatInt(newRuntime, 10) + "\n"
-
-	logger.Printf("str:%v", str)
-	logger.Printf("bytes:%v", []byte(str))
 	cgfile.Seek(0, 0)
 	for i := 0; i < maxRetries; i++ {
 		_, werr := cgfile.Write([]byte(str))
 		if werr == nil {
-			cgfile.Sync() // return nil
+			cgfile.Sync()
 		} else {
 			if i == maxRetries-1 {
-				logger.Printf("error writing the file:%v", werr)
 				return werr
 			}
 		}
 	}
-	// time.Sleep(retryInterval)
-	// str := strconv.FormatInt(newRuntime, 10) + "\n"
-	// for i := 0; i < maxRetries; i++ {
-	// 	rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
-	// 	if rerr == nil {
-	// 		return nil
-	// 	}
-	// 	if i == maxRetries-1 {
-	// 		return rerr
-	// 	}
-	// 	time.Sleep(retryInterval)
-	// }
-	// cgroups.WriteFile(path, "cpu.rt_runtime_us", str)
 
 	return nil
 }

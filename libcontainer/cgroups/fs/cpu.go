@@ -62,26 +62,18 @@ func (s *CpuGroup) SetRtSched(path string, r *configs.Resources) error {
 	}
 
 	if r.CpuRtRuntime != 0 {
-
 		// Update the KubePods cgroup
 		writeToParentMultiRuntime(filepath.Dir(filepath.Dir(filepath.Dir(path))), r)
-
 		// Update the KubePodsBestEffort cgroup
-		// cgroupKubePodsBestEffort := filepath.Join(cgroupBasePath, "kubepods.slice", "kubepods-besteffort.slice")
 		writeToParentMultiRuntime(filepath.Dir(filepath.Dir(path)), r)
-
 		// Update the pod cgroup
 		writeToParentMultiRuntime(filepath.Dir(path), r)
-
 		//write to container cgroup files
 		containerRuntimeStr := r.CpusetCpus + " " + strconv.FormatInt(r.CpuRtRuntime, 10) + " "
 		// logger.Printf("value of cpu.rt_multi_runtime_us %v\n in path:%v\n", containerRuntimeStr, path)
 		if rerr := cgroups.WriteFile(path, "cpu.rt_multi_runtime_us", containerRuntimeStr); rerr != nil {
 			return rerr
 		}
-
-		// logging data to debug.log
-
 	}
 	return nil
 }
@@ -90,13 +82,11 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	const (
 		CpuRtMultiRuntimeFile = "cpu.rt_multi_runtime_us"
 	)
-
 	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
 	buf, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
-
 	runtimeStrings := strings.Split(string(buf), " ")
 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
@@ -111,23 +101,23 @@ func readCpuRtMultiRuntimeFile(path string) ([]int64, error) {
 	return runtimes, nil
 }
 
-func readCpuRtRuntimeFile(path string) (int64, error) {
-	const (
-		CpuRtMultiRuntimeFile = "cpu.rt_runtime_us"
-	)
+// func readCpuRtRuntimeFile(path string) (int64, error) {
+// 	const (
+// 		CpuRtMultiRuntimeFile = "cpu.rt_runtime_us"
+// 	)
 
-	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
-	buf, err := os.ReadFile(filePath)
-	if err != nil {
-		return 0, err
-	}
+// 	filePath := filepath.Join(path, CpuRtMultiRuntimeFile)
+// 	buf, err := os.ReadFile(filePath)
+// 	if err != nil {
+// 		return 0, err
+// 	}
 
-	runtimeStrings := strings.Split(string(buf), " ")
-	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
+// 	runtimeStrings := strings.Split(string(buf), " ")
+// 	runtimeStrings = runtimeStrings[:len(runtimeStrings)-1]
 
-	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
-	return runtime, nil
-}
+// 	runtime, err := strconv.ParseInt(runtimeStrings[0], 10, 32)
+// 	return runtime, nil
+// }
 
 func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	const (
@@ -143,9 +133,6 @@ func writeToParentMultiRuntime(path string, r *configs.Resources) error {
 	addedRuntime = float64(r.CpuRtRuntime*parentRtPeriod/int64(r.CpuRtPeriod)) * float64(len(containerCpuset))
 
 	newRuntime := int64(addedRuntime/float64(len(runtimes))) + runtimes[0]
-	// averageRuntime := int64(addedRuntime/float64(len(containerCpuset))) + runtimes[0]
-	// cpusetStr = "0-" + strconv.Itoa(len(runtimes)-1)
-	// str = cpusetStr + " " + strconv.FormatInt(averageRuntime, 10)
 
 	str = strconv.FormatInt(newRuntime, 10)
 	if rerr := cgroups.WriteFile(path, "cpu.rt_runtime_us", str); rerr != nil {
